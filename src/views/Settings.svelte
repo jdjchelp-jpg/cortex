@@ -13,7 +13,7 @@
   import { keybinds, ACTION_LABELS, ACTION_ORDER, LEADER_ACTIONS } from "../lib/keybinds.svelte";
   import type { Action } from "../lib/keybinds.svelte";
   import type { Snippet } from "svelte";
-  import { LOCALES, translate, activeLocale, type Locale } from "../lib/i18n";
+  import { LOCALES, translate, setLocale, type Locale } from "../lib/i18n";
 
   // Shape for the reusable homelab endpoint-service snippet (Integrations tab).
   type EndpointOpts = {
@@ -169,7 +169,7 @@
   let explain    = $state<string[]>(["worked-examples","analogies"]);
   let locale     = $state<Locale>("en");
   const tr = (text: string) => translate(locale, text);
-  $effect(() => { activeLocale = locale; document.documentElement.lang = locale; });
+  $effect(() => { setLocale(locale); document.documentElement.lang = locale; });
 
   // ---- long-term memory state ----
   let memories     = $state<Memory[]>([]);

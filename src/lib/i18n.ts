@@ -51,6 +51,8 @@ const profileCopy: Record<Locale, Record<string, string>> = {
 
 export let activeLocale = $state<Locale>("en");
 
+export function setLocale(locale: Locale): void { activeLocale = locale; }
+
 export function translate(locale: Locale, text: string): string {
   const nav: Record<string, Partial<Record<Locale, string>>> = {
     Dashboard: { fr: "Tableau de bord", "zh-CN": "仪表板", nl: "Dashboard", de: "Dashboard", "pt-BR": "Painel", ja: "ダッシュボード", ko: "대시보드", ar: "لوحة التحكم", pl: "Panel", it: "Dashboard", tr: "Gösterge paneli", ru: "Панель" },
