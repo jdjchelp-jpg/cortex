@@ -172,6 +172,18 @@
   let accounts = $state<LocalAccount[]>([]);
   let activeAccountId = $state("");
   const accountStoreKey = "cortex-local-accounts";
+  const accountSubjectsKey = "cortex-account-subjects";
+  function subjectMemberships(): Record<string, string[]> { try { return JSON.parse(localStorage.getItem(accountSubjectsKey) ?? "{}"); } catch { return {}; } }
+  async function applyAccountSubjects(id: string) {
+    const all = await api.listSubjects().catch(() => [] as api.Subject[]);
+    const memberships = subjectMemberships();
+    if (!Object.keys(memberships).length && accounts[0]) memberships[accounts[0].id] = all.map((s) => s.id);
+    const known = new Set(Object.values(memberships).flat());
+    if (accounts[0]) memberships[accounts[0].id] = [...new Set([...(memberships[accounts[0].id] ?? []), ...all.filter((s) => !known.has(s.id)).map((s) => s.id)])];
+    localStorage.setItem(accountSubjectsKey, JSON.stringify(memberships));
+    app.subjects = all.filter((s) => (memberships[id] ?? []).includes(s.id));
+    app.activeSubjectId = app.subjects[0]?.id ?? null;
+  }
   function newAccountId(): string {
     const uuid = globalThis.crypto?.randomUUID;
     return uuid ? uuid.call(globalThis.crypto) : `account-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -185,11 +197,14 @@
   function selectAccount(id: string) {
     const next = accounts.find((a) => a.id === id);
     if (!next) return;
+    try { const memberships = subjectMemberships(); if (activeAccountId) { memberships[activeAccountId] = app.subjects.map((s) => s.id); localStorage.setItem(accountSubjectsKey, JSON.stringify(memberships)); } } catch { /* ignore */ }
     const current = activeAccountId ? accountSnapshot() : null;
     if (current) accounts = accounts.map((a) => a.id === current.id ? current : a);
     const chosen = accounts.find((a) => a.id === id)!;
     activeAccountId = chosen.id; name = chosen.name; pronouns = chosen.pronouns; level = chosen.level; field = chosen.field; about = chosen.about; style = chosen.style; explain = [...chosen.explain];
+    try { localStorage.setItem("cortex-active-account", id); } catch { /* ignore */ }
     persistAccounts();
+    void applyAccountSubjects(id);
   }
   function addLocalAccount() {
     const id = newAccountId();
@@ -1126,7 +1141,7 @@
       if (LOCALES.some((l) => l.id === s.language)) locale = s.language as Locale;
       try {
         const stored = JSON.parse(localStorage.getItem(accountStoreKey) ?? "[]") as LocalAccount[];
-        if (stored.length) { accounts = stored; activeAccountId = stored[0].id; }
+        if (stored.length) { accounts = stored; activeAccountId = localStorage.getItem("cortex-active-account") ?? stored[0].id; const chosen = stored.find((a) => a.id === activeAccountId) ?? stored[0]; name = chosen.name; pronouns = chosen.pronouns; level = chosen.level; field = chosen.field; about = chosen.about; style = chosen.style; explain = [...chosen.explain]; void applyAccountSubjects(chosen.id); }
         else { const first = accountSnapshot(); accounts = [first]; activeAccountId = first.id; persistAccounts(); }
       } catch { const first = accountSnapshot(); accounts = [first]; activeAccountId = first.id; }
 
