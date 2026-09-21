@@ -13,6 +13,7 @@
   import { keybinds, ACTION_LABELS, ACTION_ORDER, LEADER_ACTIONS } from "../lib/keybinds.svelte";
   import type { Action } from "../lib/keybinds.svelte";
   import type { Snippet } from "svelte";
+  import { LOCALES, translate, type Locale } from "../lib/i18n";
 
   // Shape for the reusable homelab endpoint-service snippet (Integrations tab).
   type EndpointOpts = {
@@ -166,6 +167,9 @@
   let about      = $state("Final-year MSc student. I think in code and analogies, already comfortable with Big-O. I revise late at night and learn fastest from worked examples, then a terse summary.");
   let style      = $state("balanced");
   let explain    = $state<string[]>(["worked-examples","analogies"]);
+  let locale     = $state<Locale>("en");
+  const tr = (text: string) => translate(locale, text);
+  $effect(() => { document.documentElement.lang = locale; });
 
   // ---- long-term memory state ----
   let memories     = $state<Memory[]>([]);
@@ -1086,6 +1090,7 @@
       if (s.profile_about)     about    = s.profile_about;
       if (s.profile_style)     style    = s.profile_style;
       if (s.profile_explain)   explain  = s.profile_explain.split(",").filter(Boolean);
+      if (s.language === "en" || s.language === "es-419") locale = s.language;
 
       expMoodle = s.exp_moodle === "true";
       if (s.moodle_url) mdUrl = s.moodle_url;
@@ -1111,6 +1116,7 @@
       profile_about: about,
       profile_style: style,
       profile_explain: explain.join(","),
+      language: locale,
     }).then(() => app.pushToast({ kind: "success", title: "Profile saved", body: "The AI will use your updated context." }))
       .catch(() => app.pushToast({ kind: "error", title: "Save failed" }));
   }
@@ -1291,13 +1297,13 @@
     {#if tab === "profile"}
       <div class="set-pane">
         <header class="set-head">
-          <div class="eyebrow">Profile</div>
+          <div class="eyebrow">{tr("Profile")}</div>
           <h1 class="set-title">Who the AI thinks you are</h1>
           <p class="set-sub">Shared with every chat and generation so answers fit your level and style. Stays on this machine.</p>
         </header>
 
         <section class="set-group">
-          <div class="set-group-h"><h3 class="set-group-t">Identity</h3></div>
+          <div class="set-group-h"><h3 class="set-group-t">{tr("Identity")}</h3></div>
           <div class="set-card">
             <div class="set-row">
               <div class="set-row-l"><div class="set-row-t">Display name</div></div>
@@ -1325,6 +1331,21 @@
             <div class="set-row">
               <div class="set-row-l"><div class="set-row-t">Field of study</div></div>
               <div class="set-row-r"><input class="input" bind:value={field} /></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="set-group">
+          <div class="set-group-h">
+            <h3 class="set-group-t">Language / Idioma</h3>
+            <p class="set-group-d">Choose the interface language. More translations can be added without changing your study data.</p>
+          </div>
+          <div class="set-card">
+            <div class="set-row">
+              <div class="set-row-l"><div class="set-row-t">Interface language</div><div class="set-row-d">{LOCALES.find((l) => l.id === locale)?.native}</div></div>
+              <div class="set-row-r">
+                <Picker value={locale} onChange={(v) => { locale = v as Locale; api.setSetting("language", locale).catch(() => {}); }} options={LOCALES.map((l) => ({ id: l.id, label: l.native }))} />
+              </div>
             </div>
           </div>
         </section>

@@ -117,6 +117,46 @@
     catch { app.pushToast({ kind: "error", title: "Copy failed" }); }
   }
 
+  // Portable bibliography exchange. BibTeX is intentionally generated in the
+  // renderer so it works offline and keeps the native database API small.
+  function bibKey(r: Reference): string {
+    const author = (r.authors ?? "cortex").split(/[,&]/)[0].replace(/[^a-z0-9]/gi, "").toLowerCase() || "cortex";
+    return `${author}${r.year ?? ""}`;
+  }
+  function bibtex(r: Reference): string {
+    const type = r.ctype === "book" ? "book" : r.ctype === "article" ? "article" : "misc";
+    const esc = (v: string | null | undefined) => (v ?? "").replace(/[{}]/g, "").replace(/&/g, "\\&");
+    const fields = [
+      ["title", r.title], ["author", r.authors], ["year", r.year],
+      [type === "article" ? "journal" : "publisher", r.container], ["doi", r.doi], ["url", r.url], ["note", r.notes],
+    ].filter(([, v]) => v?.trim()).map(([k, v]) => `  ${k} = {${esc(v)}}`).join(",\n");
+    return `@${type}{${bibKey(r)},\n${fields}\n}`;
+  }
+  function downloadText(name: string, text: string, type: string) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type }));
+    a.download = name; a.click(); URL.revokeObjectURL(a.href);
+  }
+  function exportBibtex() {
+    if (!refs.length) return;
+    downloadText("cortex-bibliography.bib", refs.map(bibtex).join("\n\n") + "\n", "application/x-bibtex");
+    app.pushToast({ kind: "success", title: `Exported ${refs.length} references` });
+  }
+  async function importBibtex(file: File) {
+    const text = await file.text();
+    const entries = [...text.matchAll(/@([^{]+)\\{([^,]+),([\\s\\S]*?)\\n\\}/g)];
+    let imported = 0;
+    for (const [, rawType, , body] of entries) {
+      const field = (name: string) => body.match(new RegExp(`${name}\\s*=\\s*[\\{\\\"]([\\s\\S]*?)[\\}\"]\\s*,?`, "i"))?.[1]?.trim() || null;
+      const title = field("title");
+      if (!subjectId || !title) continue;
+      await api.addCitation(subjectId, { ctype: rawType.toLowerCase() === "book" ? "book" : rawType.toLowerCase() === "article" ? "article" : "other", title, authors: field("author"), year: field("year"), container: field("journal") ?? field("publisher"), doi: field("doi"), url: field("url"), notes: field("note") });
+      imported++;
+    }
+    await load();
+    app.pushToast({ kind: imported ? "success" : "warning", title: imported ? `Imported ${imported} references` : "No BibTeX entries found" });
+  }
+
   // ── assignments (calendar events: assignment | project | exam | deadline) ──
   const ASSIGNMENT_KINDS = ["exam", "assignment", "project", "deadline"];
   let assignments = $state<CalEvent[]>([]);
@@ -383,6 +423,8 @@
         <button class="btn btn--sm" disabled={refs.length === 0} onclick={copyAll} title="Copy the full bibliography">
           <Icon name="doc" size={12} /> Copy all
         </button>
+        <button class="btn btn--sm" disabled={refs.length === 0} onclick={exportBibtex} title="Export BibTeX"><Icon name="download" size={12} /> BibTeX</button>
+        <label class="btn btn--sm" title="Import BibTeX"><Icon name="upload" size={12} /> Import<input hidden type="file" accept=".bib,.bibtex,text/plain" onchange={(e) => { const file = e.currentTarget.files?.[0]; if (file) void importBibtex(file); e.currentTarget.value = ""; }} /></label>
         <button class="btn btn--sm btn--primary" onclick={startNew}><Icon name="plus" size={12} /> Add</button>
       </div>
 

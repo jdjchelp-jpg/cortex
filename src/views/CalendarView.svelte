@@ -136,6 +136,24 @@
   let events = $state<CalEvent[]>([]);
   let loading = $state(false);
 
+  function icsDate(ms: number): string {
+    return new Date(ms).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  }
+  function icsEscape(value: string): string {
+    return value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  }
+  function exportIcs() {
+    if (!events.length) return;
+    const body = events.map((e) => {
+      const end = e.end_ms ?? (e.all_day ? e.start_ms + 86_400_000 : e.start_ms + 60 * 60 * 1000);
+      return ["BEGIN:VEVENT", `UID:${e.id}@cortex`, `DTSTAMP:${icsDate(Date.now())}`, `DTSTART${e.all_day ? ";VALUE=DATE" : ""}:${e.all_day ? new Date(e.start_ms).toISOString().slice(0, 10).replace(/-/g, "") : icsDate(e.start_ms)}`, `DTEND${e.all_day ? ";VALUE=DATE" : ""}:${e.all_day ? new Date(end).toISOString().slice(0, 10).replace(/-/g, "") : icsDate(end)}`, `SUMMARY:${icsEscape(e.title)}`, e.description ? `DESCRIPTION:${icsEscape(e.description)}` : "", e.location ? `LOCATION:${icsEscape(e.location)}` : "", "END:VEVENT"].filter(Boolean).join("\r\n");
+    }).join("\r\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Cortex//Calendar//EN\r\n${body}\r\nEND:VCALENDAR\r\n`], { type: "text/calendar" }));
+    a.download = `cortex-${year}-${String(month + 1).padStart(2, "0")}.ics`; a.click(); URL.revokeObjectURL(a.href);
+    app.pushToast({ kind: "success", title: `Exported ${events.length} calendar events` });
+  }
+
   // Loads enough to cover whichever view is active (always the 6-week month grid,
   // which comfortably spans the week/day anchors too since they sync the month).
   function loadWindow(): { fromMs: number; toMs: number } {
@@ -472,6 +490,7 @@
           placeholder="All subjects"
         />
       </div>
+      <button class="btn btn--sm" type="button" onclick={exportIcs} disabled={!events.length} title="Export visible events as an iCalendar file"><Icon name="download" size={12} /> <span>Export</span></button>
       <button class="btn btn--primary btn--sm" type="button" onclick={() => openCreate(addTarget())}>
         <Icon name="plus" size={12} />
         <span>New</span>

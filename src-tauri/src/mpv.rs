@@ -62,14 +62,16 @@ fn data_dir(app: &AppHandle) -> Result<PathBuf> {
 pub fn cleanup_stale(app: &AppHandle) {
     let Ok(dir) = data_dir(app) else { return };
     let socket = socket_path(&dir);
-    if socket.exists() {
-        let _ = ipc(&socket, &json!({ "command": ["quit"] }));
-        let _ = std::fs::remove_file(&socket);
-    }
+    let _ = ipc(&socket, &json!({ "command": ["quit"] }));
+    #[cfg(not(windows))]
+    { let _ = std::fs::remove_file(&socket); }
 }
 
-fn socket_path(dir: &Path) -> PathBuf {
-    dir.join("mpv.sock")
+fn socket_path(dir: &Path) -> String {
+    #[cfg(windows)]
+    { return "127.0.0.1:28453".to_string(); }
+    #[cfg(not(windows))]
+    { dir.join("mpv.sock").display().to_string() }
 }
 
 /// Resolve `bin` against PATH, returning its absolute path if found.
@@ -120,7 +122,7 @@ fn ensure_ytdlp(dir: &Path) -> Result<PathBuf> {
 
 /// Start mpv (idle, no video) if it isn't already running, listening on the IPC
 /// socket and configured to find our yt-dlp. Waits briefly for the socket.
-fn ensure_mpv(socket: &Path, ytdlp: &Path, volume: u8) -> Result<()> {
+fn ensure_mpv(socket: &str, ytdlp: &Path, volume: u8) -> Result<()> {
     let holder = mpv_holder();
     let mut guard = holder.lock().unwrap();
     if let Some(child) = guard.as_mut() {
@@ -132,10 +134,9 @@ fn ensure_mpv(socket: &Path, ytdlp: &Path, volume: u8) -> Result<()> {
     }
     // A leftover socket with a live listener is an orphan from a crashed
     // session — quit it so two mpvs never play at once, then clear the socket.
-    if socket.exists() {
-        let _ = ipc(socket, &json!({ "command": ["quit"] }));
-        let _ = std::fs::remove_file(socket);
-    }
+    let _ = ipc(socket, &json!({ "command": ["quit"] }));
+    #[cfg(not(windows))]
+    { let _ = std::fs::remove_file(socket); }
     let mpv_bin = find_on_path("mpv").unwrap_or_else(|| PathBuf::from("mpv"));
     let mut cmd = Command::new(&mpv_bin);
     cmd.arg("--no-video")
@@ -146,7 +147,7 @@ fn ensure_mpv(socket: &Path, ytdlp: &Path, volume: u8) -> Result<()> {
         .arg("--cache=yes")
         .arg("--demuxer-readahead-secs=10")
         .arg(format!("--volume={volume}"))
-        .arg(format!("--input-ipc-server={}", socket.display()))
+        .arg(format!("--input-ipc-server={socket}"))
         .arg(format!(
             "--script-opts=ytdl_hook-ytdl_path={}",
             ytdlp.display()
@@ -166,7 +167,7 @@ fn ensure_mpv(socket: &Path, ytdlp: &Path, volume: u8) -> Result<()> {
     *guard = Some(child);
     drop(guard);
     for _ in 0..60 {
-        if socket.exists() {
+        if ipc(socket, &json!({ "command": ["get_property", "idle-active"] })).is_ok() {
             return Ok(());
         }
         std::thread::sleep(Duration::from_millis(50));
@@ -176,7 +177,7 @@ fn ensure_mpv(socket: &Path, ytdlp: &Path, volume: u8) -> Result<()> {
 
 /// Send one JSON command line to mpv's IPC socket.
 #[cfg(unix)]
-fn ipc(socket: &Path, cmd: &Value) -> Result<()> {
+fn ipc(socket: &str, cmd: &Value) -> Result<()> {
     use std::io::Write;
     use std::os::unix::net::UnixStream;
     let mut stream = UnixStream::connect(socket)
@@ -187,19 +188,22 @@ fn ipc(socket: &Path, cmd: &Value) -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(unix))]
-fn ipc(_socket: &Path, _cmd: &Value) -> Result<()> {
-    Err(Error::Unsupported(
-        "URL audio streaming requires a Unix socket (Linux/macOS).".into(),
-    ))
+#[cfg(windows)]
+fn ipc(socket: &str, cmd: &Value) -> Result<()> {
+    use std::io::Write;
+    use std::net::TcpStream;
+    let mut stream = TcpStream::connect(socket)
+        .map_err(|e| Error::Other(format!("mpv not reachable: {e}")))?;
+    let mut line = serde_json::to_vec(cmd)?;
+    line.push(b'\n');
+    stream.write_all(&line)?;
+    Ok(())
 }
 
 /// Best-effort IPC (used for pause/stop/volume): if mpv isn't running, there's
 /// nothing to control, so a connect failure is silently ignored.
-fn ipc_soft(socket: &Path, cmd: &Value) {
-    if socket.exists() {
-        let _ = ipc(socket, cmd);
-    }
+fn ipc_soft(socket: &str, cmd: &Value) {
+    let _ = ipc(socket, cmd);
 }
 
 // ---- commands ----------------------------------------------------------
