@@ -69,7 +69,7 @@ pub fn cleanup_stale(app: &AppHandle) {
 
 fn socket_path(dir: &Path) -> String {
     #[cfg(windows)]
-    { return "127.0.0.1:28453".to_string(); }
+    { let _ = dir; return "127.0.0.1:28453".to_string(); }
     #[cfg(not(windows))]
     { dir.join("mpv.sock").display().to_string() }
 }

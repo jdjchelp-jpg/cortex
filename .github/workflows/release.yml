@@ -215,7 +215,7 @@ jobs:
           releaseBody: "See the assets below to download and install Cortex for your platform."
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }}
+          args: ${{ format('{0} --config src-tauri/tauri.release.conf.json', matrix.args) }}
 
   # ── Publish the release, then update AUR + Homebrew tap automatically ──
   # Runs only after every matrix build succeeds (so all assets exist), on tag

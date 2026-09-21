@@ -53,7 +53,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFBNUMwMkRCRThCNDBBMDkKUldRSkNyVG8yd0pjcXFoSUlTcUNGdk1IMlFMdElZZXRrQnp5cndpSWtVYy9RZlpuS1lBTUpOOUEK",
+      "pubkey": "",
       "endpoints": [
         "https://github.com/PndaMan/cortex/releases/latest/download/latest.json"
       ]
