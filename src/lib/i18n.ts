@@ -49,7 +49,10 @@ const profileCopy: Record<Locale, Record<string, string>> = {
   ru: { "Who the AI thinks you are": "Как ИИ вас воспринимает", "Shared with every chat and generation so answers fit your level and style. Stays on this machine.": "Используется в каждом чате и при каждой генерации, чтобы ответы соответствовали вашему уровню и стилю. Хранится на этом устройстве.", "Undergraduate": "Бакалавриат", Postgraduate: "Магистратура", "PhD / research": "Аспирантура / исследования", "Self-study": "Самостоятельное обучение", "Context the AI uses to personalize explanations.": "Контекст, который ИИ использует для персонализации объяснений.", "In your words": "Вашими словами", "Response style": "Стиль ответа", "How much detail by default.": "Уровень подробности по умолчанию.", "Explain with": "Объяснять с помощью", "Pick what helps you learn fastest.": "Выберите то, что помогает учиться быстрее.", "What the AI receives": "Что получает ИИ", Concise: "Кратко", Balanced: "Сбалансированно", Detailed: "Подробно" },
 };
 
-export let activeLocale = $state<Locale>("en");
+// This module is regular TypeScript, not a .svelte component. Keep the shared
+// locale as a plain value; using the $state rune here would be emitted as a
+// runtime identifier and crash the production WebView.
+export let activeLocale: Locale = "en";
 
 export function setLocale(locale: Locale): void { activeLocale = locale; }
 
