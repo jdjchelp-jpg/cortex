@@ -3,6 +3,7 @@
   import Icon from "./Icon.svelte";
   import { stations } from "../lib/mock";
   import { moveItem, reorderable } from "../lib/dnd";
+  import { t } from "../lib/i18n";
 
   // Resolve a station id (built-in or custom) to uniform display fields.
   type Row = { id: string; name: string; kind: string; ico: string };
@@ -57,8 +58,8 @@
     <div class="music-modal" role="presentation" onmousedown={e => e.stopPropagation()}>
       <header class="music-head">
         <div>
-          <div class="eyebrow">Study sound</div>
-          <div class="mh-title">Now playing</div>
+          <div class="eyebrow">{t("Study sound")}</div>
+          <div class="mh-title">{t("Now playing")}</div>
         </div>
         <button class="btn btn--icon btn--sm btn--ghost" onclick={() => (app.musicOpen = false)}>
           <Icon name="x" size={12} />
@@ -77,10 +78,10 @@
         <div class="mn-info">
           <div class="mn-name">{cur.name}</div>
           <div class="mn-sub mono">
-            {#if app.musicBuffering}buffering…{:else}{cur.kind} · ad-free{/if}
+            {#if app.musicBuffering}{t("buffering…")}{:else}{cur.kind} · {t("ad-free")}{/if}
           </div>
         </div>
-        <button class="mn-play" onclick={() => app.toggleMusic()} title="Play / pause">
+        <button class="mn-play" onclick={() => app.toggleMusic()} title={t("Play / pause")}>
           <Icon name={app.music.playing ? "pause" : "play"} size={16} />
         </button>
       </div>
@@ -115,7 +116,7 @@
       <div class="music-list">
         <!-- Favourites (built-in or custom), pinned to the top -->
         {#if favStations.length}
-          <div class="music-cat">★ Favourites</div>
+          <div class="music-cat">★ {t("Favourites")}</div>
           {#each favStations as s (s.id)}
             <div
               class={"station" + (s.id === app.music.current ? " on" : "")}
@@ -140,7 +141,7 @@
 
         <!-- User-added YouTube / URL stations FIRST — drag to reorder -->
         {#if app.customStations.length}
-          <div class="music-cat">Your stations</div>
+          <div class="music-cat">{t("Your stations")}</div>
         {/if}
         {#each app.customStations as s, i (s.id)}
           <div
@@ -172,7 +173,7 @@
         {/each}
 
         <!-- Built-in stations — songs first, then noises (mock.ts order) -->
-        <div class="music-cat">Stations</div>
+        <div class="music-cat">{t("Stations")}</div>
         {#each stations as s (s.id)}
           <div
             class={"station" + (s.id === app.music.current ? " on" : "")}
@@ -216,7 +217,7 @@
           </div>
         {:else}
           <button class="music-add-btn" onclick={() => (adding = true)}>
-            <Icon name="plus" size={12} /> Add a YouTube station
+            <Icon name="plus" size={12} /> {t("Add a YouTube station")}
           </button>
         {/if}
       </div>

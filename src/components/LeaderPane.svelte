@@ -2,6 +2,7 @@
   import { app } from "../lib/store.svelte";
   import Icon from "./Icon.svelte";
   import { LEADER_ACTIONS, type LeaderAction } from "../lib/keybinds.svelte";
+  import { t } from "../lib/i18n";
 
   // Run handlers keyed by leader key. The key/label/detail spec lives in
   // lib/keybinds.svelte (shared with the help overlay); only the behavior is here.
@@ -57,15 +58,15 @@
     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
     <div class="leader" onmousedown={e => e.stopPropagation()}>
       <div class="leader-head">
-        <span class="kbd">␣</span> Space leader — context actions
+        <span class="kbd">␣</span> {t("Space leader — context actions")}
       </div>
       <div class="leader-grid">
         {#each actions as a}
           <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
           <div class="leader-item" onclick={() => runAction(a)}>
-            <span class="lk">{a.key}</span>{a.label}
+            <span class="lk">{a.key}</span>{t(a.label)}
             {#if a.detail}
-              <span class="ld">{a.detail}</span>
+              <span class="ld">{t(a.detail)}</span>
             {/if}
           </div>
         {/each}

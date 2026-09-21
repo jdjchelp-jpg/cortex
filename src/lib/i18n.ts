@@ -49,6 +49,23 @@ const profileCopy: Record<Locale, Record<string, string>> = {
   ru: { "Who the AI thinks you are": "Как ИИ вас воспринимает", "Shared with every chat and generation so answers fit your level and style. Stays on this machine.": "Используется в каждом чате и при каждой генерации, чтобы ответы соответствовали вашему уровню и стилю. Хранится на этом устройстве.", "Undergraduate": "Бакалавриат", Postgraduate: "Магистратура", "PhD / research": "Аспирантура / исследования", "Self-study": "Самостоятельное обучение", "Context the AI uses to personalize explanations.": "Контекст, который ИИ использует для персонализации объяснений.", "In your words": "Вашими словами", "Response style": "Стиль ответа", "How much detail by default.": "Уровень подробности по умолчанию.", "Explain with": "Объяснять с помощью", "Pick what helps you learn fastest.": "Выберите то, что помогает учиться быстрее.", "What the AI receives": "Что получает ИИ", Concise: "Кратко", Balanced: "Сбалансированно", Detailed: "Подробно" },
 };
 
+const commonCopy: Record<Locale, Record<string, string>> = {
+  en: {},
+  "es-419": { "Study sound": "Sonido de estudio", "Now playing": "Reproduciendo", "ad-free": "sin anuncios", "Favourites": "Favoritos", "Your stations": "Tus estaciones", Stations: "Estaciones", "Add a YouTube station": "Añadir estación de YouTube", "Play / pause": "Reproducir / pausar", "Space leader — context actions": "Líder de espacio — acciones de contexto" },
+  fr: { "Study sound": "Son d’étude", "Now playing": "Lecture en cours", "ad-free": "sans publicité", Favourites: "Favoris", "Your stations": "Vos stations", Stations: "Stations", "Add a YouTube station": "Ajouter une station YouTube", "Play / pause": "Lire / pause", "Space leader — context actions": "Leader espace — actions contextuelles" },
+  "zh-CN": { "Study sound": "学习声音", "Now playing": "正在播放", "ad-free": "无广告", Favourites: "收藏", "Your stations": "你的电台", Stations: "电台", "Add a YouTube station": "添加 YouTube 电台", "Play / pause": "播放 / 暂停", "Space leader — context actions": "空格领导 — 上下文操作" },
+  nl: { "Study sound": "Studiegeluid", "Now playing": "Nu aan het afspelen", "ad-free": "zonder advertenties", Favourites: "Favorieten", "Your stations": "Jouw stations", Stations: "Stations", "Add a YouTube station": "YouTube-station toevoegen", "Play / pause": "Afspelen / pauzeren", "Space leader — context actions": "Spatieleider — contextacties" },
+  de: { "Study sound": "Lernklang", "Now playing": "Wird abgespielt", "ad-free": "werbefrei", Favourites: "Favoriten", "Your stations": "Deine Sender", Stations: "Sender", "Add a YouTube station": "YouTube-Sender hinzufügen", "Play / pause": "Wiedergabe / Pause", "Space leader — context actions": "Leertaste — Kontextaktionen" },
+  "pt-BR": { "Study sound": "Som de estudo", "Now playing": "Reproduzindo agora", "ad-free": "sem anúncios", Favourites: "Favoritos", "Your stations": "Suas estações", Stations: "Estações", "Add a YouTube station": "Adicionar estação do YouTube", "Play / pause": "Reproduzir / pausar", "Space leader — context actions": "Espaço — ações de contexto" },
+  ja: { "Study sound": "学習サウンド", "Now playing": "再生中", "ad-free": "広告なし", Favourites: "お気に入り", "Your stations": "自分のステーション", Stations: "ステーション", "Add a YouTube station": "YouTubeステーションを追加", "Play / pause": "再生 / 一時停止", "Space leader — context actions": "スペースリーダー — コンテキスト操作" },
+  ko: { "Study sound": "학습 사운드", "Now playing": "현재 재생", "ad-free": "광고 없음", Favourites: "즐겨찾기", "Your stations": "내 스테이션", Stations: "스테이션", "Add a YouTube station": "YouTube 스테이션 추가", "Play / pause": "재생 / 일시정지", "Space leader — context actions": "스페이스 리더 — 컨텍스트 작업" },
+  ar: { "Study sound": "صوت الدراسة", "Now playing": "يعمل الآن", "ad-free": "بدون إعلانات", Favourites: "المفضلة", "Your stations": "محطاتك", Stations: "المحطات", "Add a YouTube station": "إضافة محطة YouTube", "Play / pause": "تشغيل / إيقاف مؤقت", "Space leader — context actions": "قائد المسافة — إجراءات السياق" },
+  pl: { "Study sound": "Dźwięk do nauki", "Now playing": "Teraz odtwarzane", "ad-free": "bez reklam", Favourites: "Ulubione", "Your stations": "Twoje stacje", Stations: "Stacje", "Add a YouTube station": "Dodaj stację YouTube", "Play / pause": "Odtwórz / pauza", "Space leader — context actions": "Spacja — akcje kontekstowe" },
+  it: { "Study sound": "Suono per lo studio", "Now playing": "In riproduzione", "ad-free": "senza pubblicità", Favourites: "Preferiti", "Your stations": "Le tue stazioni", Stations: "Stazioni", "Add a YouTube station": "Aggiungi stazione YouTube", "Play / pause": "Riproduci / pausa", "Space leader — context actions": "Spazio — azioni contestuali" },
+  tr: { "Study sound": "Çalışma sesi", "Now playing": "Şimdi çalıyor", "ad-free": "reklamsız", Favourites: "Favoriler", "Your stations": "İstasyonların", Stations: "İstasyonlar", "Add a YouTube station": "YouTube istasyonu ekle", "Play / pause": "Oynat / duraklat", "Space leader — context actions": "Boşluk lideri — bağlam eylemleri" },
+  ru: { "Study sound": "Звук для учёбы", "Now playing": "Сейчас играет", "ad-free": "без рекламы", Favourites: "Избранное", "Your stations": "Ваши станции", Stations: "Станции", "Add a YouTube station": "Добавить станцию YouTube", "Play / pause": "Воспроизвести / пауза", "Space leader — context actions": "Пробел — контекстные действия" },
+};
+
 // This module is regular TypeScript, not a .svelte component. Keep the shared
 // locale as a plain value; using the $state rune here would be emitted as a
 // runtime identifier and crash the production WebView.
@@ -66,7 +83,7 @@ export function translate(locale: Locale, text: string): string {
     Insights: { fr: "Analyses", "zh-CN": "洞察", nl: "Inzichten", de: "Einblicke", "pt-BR": "Insights", ja: "インサイト", ko: "인사이트", ar: "التحليلات", pl: "Analizy", it: "Analisi", tr: "İçgörüler", ru: "Аналитика" },
     Subjects: { fr: "Matières", "zh-CN": "科目", nl: "Vakken", de: "Fächer", "pt-BR": "Disciplinas", ja: "科目", ko: "과목", ar: "المواد", pl: "Przedmioty", it: "Materie", tr: "Dersler", ru: "Предметы" },
   };
-  return strings[locale][text] ?? profileCopy[locale][text] ?? nav[text]?.[locale] ?? text;
+  return strings[locale][text] ?? profileCopy[locale][text] ?? commonCopy[locale][text] ?? nav[text]?.[locale] ?? text;
 }
 
 export function t(text: string): string { return translate(activeLocale, text); }
