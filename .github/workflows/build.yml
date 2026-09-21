@@ -49,4 +49,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: ${{ runner.os == 'Linux' && '--bundles deb,appimage' || '' }}
+          # Pull in the CI overlay so unsigned PR/main builds do not fail just
+          # because production updater signing secrets are not configured.
+          args: ${{ runner.os == 'Linux' && '--bundles deb,appimage --config src-tauri/tauri.ci.conf.json' || '--config src-tauri/tauri.ci.conf.json' }}
