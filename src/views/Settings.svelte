@@ -13,7 +13,7 @@
   import { keybinds, ACTION_LABELS, ACTION_ORDER, LEADER_ACTIONS } from "../lib/keybinds.svelte";
   import type { Action } from "../lib/keybinds.svelte";
   import type { Snippet } from "svelte";
-  import { LOCALES, translate, type Locale } from "../lib/i18n";
+  import { LOCALES, translate, activeLocale, type Locale } from "../lib/i18n";
 
   // Shape for the reusable homelab endpoint-service snippet (Integrations tab).
   type EndpointOpts = {
@@ -169,7 +169,7 @@
   let explain    = $state<string[]>(["worked-examples","analogies"]);
   let locale     = $state<Locale>("en");
   const tr = (text: string) => translate(locale, text);
-  $effect(() => { document.documentElement.lang = locale; });
+  $effect(() => { activeLocale = locale; document.documentElement.lang = locale; });
 
   // ---- long-term memory state ----
   let memories     = $state<Memory[]>([]);
@@ -1298,38 +1298,38 @@
       <div class="set-pane">
         <header class="set-head">
           <div class="eyebrow">{tr("Profile")}</div>
-          <h1 class="set-title">Who the AI thinks you are</h1>
-          <p class="set-sub">Shared with every chat and generation so answers fit your level and style. Stays on this machine.</p>
+          <h1 class="set-title">{tr("Who the AI thinks you are")}</h1>
+          <p class="set-sub">{tr("Shared with every chat and generation so answers fit your level and style. Stays on this machine.")}</p>
         </header>
 
         <section class="set-group">
           <div class="set-group-h"><h3 class="set-group-t">{tr("Identity")}</h3></div>
           <div class="set-card">
             <div class="set-row">
-              <div class="set-row-l"><div class="set-row-t">Display name</div></div>
+              <div class="set-row-l"><div class="set-row-t">{tr("Display name")}</div></div>
               <div class="set-row-r"><input class="input" bind:value={name} /></div>
             </div>
             <div class="set-row">
-              <div class="set-row-l"><div class="set-row-t">Pronouns</div></div>
+              <div class="set-row-l"><div class="set-row-t">{tr("Pronouns")}</div></div>
               <div class="set-row-r"><input class="input" bind:value={pronouns} /></div>
             </div>
             <div class="set-row">
-              <div class="set-row-l"><div class="set-row-t">Level</div></div>
+              <div class="set-row-l"><div class="set-row-t">{tr("Level")}</div></div>
               <div class="set-row-r">
                 <Picker
                   value={level}
                   onChange={(v) => (level = v)}
                   options={[
-                    { id: "undergrad", label: "Undergraduate" },
-                    { id: "postgrad",  label: "Postgraduate" },
-                    { id: "phd",       label: "PhD / research" },
-                    { id: "self",      label: "Self-study" },
+                    { id: "undergrad", label: tr("Undergraduate") },
+                    { id: "postgrad",  label: tr("Postgraduate") },
+                    { id: "phd",       label: tr("PhD / research") },
+                    { id: "self",      label: tr("Self-study") },
                   ]}
                 />
               </div>
             </div>
             <div class="set-row">
-              <div class="set-row-l"><div class="set-row-t">Field of study</div></div>
+              <div class="set-row-l"><div class="set-row-t">{tr("Field of study")}</div></div>
               <div class="set-row-r"><input class="input" bind:value={field} /></div>
             </div>
           </div>
@@ -1352,31 +1352,31 @@
 
         <section class="set-group">
           <div class="set-group-h">
-            <h3 class="set-group-t">About you</h3>
-            <p class="set-group-d">Context the AI uses to personalize explanations.</p>
+            <h3 class="set-group-t">{tr("About you")}</h3>
+            <p class="set-group-d">{tr("Context the AI uses to personalize explanations.")}</p>
           </div>
           <div class="set-card">
             <div class="set-row stacked">
-              <div class="set-row-t">In your words</div>
+              <div class="set-row-t">{tr("In your words")}</div>
               <textarea class="input set-textarea set-bio" bind:value={about} rows={6}></textarea>
             </div>
             <div class="set-row">
               <div class="set-row-l">
-                <div class="set-row-t">Response style</div>
-                <div class="set-row-d">How much detail by default.</div>
+                <div class="set-row-t">{tr("Response style")}</div>
+                <div class="set-row-d">{tr("How much detail by default.")}</div>
               </div>
               <div class="set-row-r">
                 <div class="seg">
                   {#each [{ id: "concise", label: "Concise" }, { id: "balanced", label: "Balanced" }, { id: "detailed", label: "Detailed" }] as opt}
-                    <button type="button" class={"seg-opt" + (style === opt.id ? " on" : "")} onclick={() => (style = opt.id)}>{opt.label}</button>
+                    <button type="button" class={"seg-opt" + (style === opt.id ? " on" : "")} onclick={() => (style = opt.id)}>{tr(opt.label)}</button>
                   {/each}
                 </div>
               </div>
             </div>
             <div class="set-row stacked">
               <div class="set-row-l">
-                <div class="set-row-t">Explain with</div>
-                <div class="set-row-d">Pick what helps you learn fastest.</div>
+                <div class="set-row-t">{tr("Explain with")}</div>
+                <div class="set-row-d">{tr("Pick what helps you learn fastest.")}</div>
               </div>
               <div class="set-row-r">
                 <div class="tag-suggest" style="margin-top:0">
@@ -1398,8 +1398,8 @@
 
         <section class="set-group">
           <div class="set-group-h">
-            <h3 class="set-group-t">Memory</h3>
-            <p class="set-group-d">Long-term facts the AI is given in every chat — like remembering your exam date, the textbook you use, or how you like answers framed.</p>
+            <h3 class="set-group-t">{tr("Memory")}</h3>
+            <p class="set-group-d">{tr("Long-term facts the AI is given in every chat — like remembering your exam date, the textbook you use, or how you like answers framed.")}</p>
           </div>
           <div class="set-card">
             <div class="set-row stacked">
@@ -1408,18 +1408,18 @@
                   <input
                     class="input"
                     bind:value={newMemory}
-                    placeholder="e.g. My final exam is on June 20th"
+                    placeholder={tr("e.g. My final exam is on June 20th")}
                     onkeydown={(e) => { if (e.key === "Enter") { e.preventDefault(); addMemoryFact(); } }}
                   />
                   <button class="btn btn--primary" onclick={addMemoryFact} disabled={!newMemory.trim() || memoryBusy}>
-                    <Icon name="check" size={13} /> Remember
+                    <Icon name="check" size={13} /> {tr("Remember")}
                   </button>
                 </div>
               </div>
             </div>
             {#if memories.length === 0}
               <div class="set-row">
-                <div class="set-row-l"><div class="set-row-d">No memories yet. Add a fact above and the AI will keep it in mind.</div></div>
+                <div class="set-row-l"><div class="set-row-d">{tr("No memories yet. Add a fact above and the AI will keep it in mind.")}</div></div>
               </div>
             {:else}
               {#each memories as m (m.id)}
@@ -1437,7 +1437,7 @@
         </section>
 
         <div class="set-preview">
-          <div class="label" style="margin-bottom:8px">What the AI receives</div>
+          <div class="label" style="margin-bottom:8px">{tr("What the AI receives")}</div>
           <pre class="set-sysprompt mono">User: {name} ({pronouns}) · {levelLabels[level] ?? level}
 Studying: {field}
 Style: {style}, prefers {explain.join(", ") || "no special format"}
@@ -1446,7 +1446,7 @@ Notes: {about}</pre>
 
         <div class="set-foot-actions">
           <button class="btn btn--primary" onclick={saveProfile}>
-            <Icon name="check" size={13} /> Save profile
+            <Icon name="check" size={13} /> {tr("Save profile")}
           </button>
         </div>
       </div>

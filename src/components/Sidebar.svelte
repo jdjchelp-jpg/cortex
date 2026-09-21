@@ -6,6 +6,7 @@
   import { stations } from "../lib/mock";
   import { moveItem, reorderable } from "../lib/dnd";
   import logo from "../assets/cortex-logo.png";
+  import { t } from "../lib/i18n";
 
   // ── pointer-based reordering (subjects + a subject's topics). No native
   //    HTML5 drag — it crashes WebKitGTK; see lib/dnd.ts. ──
@@ -132,7 +133,7 @@
       tabindex="0"
       onkeydown={(e) => e.key === "Enter" && app.setView("dashboard")}
     >
-      <Icon name="home" size={14} /> Dashboard <span class="nav-k">␣ g</span>
+        <Icon name="home" size={14} /> {t("Dashboard")} <span class="nav-k">␣ g</span>
     </div>
     <div
       class="sb-nav-item{app.view === 'recorder' ? ' on' : ''}"
@@ -141,7 +142,7 @@
       tabindex="0"
       onkeydown={(e) => e.key === "Enter" && app.setView("recorder")}
     >
-      <Icon name="record" size={13} /> Record lecture <span class="nav-k">␣ r</span>
+        <Icon name="record" size={13} /> {t("Record lecture")} <span class="nav-k">␣ r</span>
     </div>
     <div
       class="sb-nav-item{app.view === 'add-source' ? ' on' : ''}"
@@ -150,7 +151,7 @@
       tabindex="0"
       onkeydown={(e) => e.key === "Enter" && app.setView("add-source")}
     >
-      <Icon name="plus" size={14} /> Add source <span class="nav-k">␣ s</span>
+        <Icon name="plus" size={14} /> {t("Add source")} <span class="nav-k">␣ s</span>
     </div>
     <div
       class="sb-nav-item{app.view === 'notes' ? ' on' : ''}"
@@ -159,7 +160,7 @@
       tabindex="0"
       onkeydown={(e) => e.key === "Enter" && app.setView("notes")}
     >
-      <Icon name="reader" size={14} /> Notes <span class="nav-k">␣ o</span>
+        <Icon name="reader" size={14} /> {t("Notes")} <span class="nav-k">␣ o</span>
     </div>
     <div
       class="sb-nav-item{app.view === 'calendar' ? ' on' : ''}"
@@ -168,7 +169,7 @@
       tabindex="0"
       onkeydown={(e) => e.key === "Enter" && app.setView("calendar")}
     >
-      <Icon name="calendar" size={14} /> Calendar <span class="nav-k">␣ a</span>
+        <Icon name="calendar" size={14} /> {t("Calendar")} <span class="nav-k">␣ a</span>
     </div>
     <div
       class="sb-nav-item{app.view === 'analytics' ? ' on' : ''}"
@@ -177,12 +178,12 @@
       tabindex="0"
       onkeydown={(e) => e.key === "Enter" && app.setView("analytics")}
     >
-      <Icon name="chart" size={14} /> Insights <span class="nav-k">␣ i</span>
+        <Icon name="chart" size={14} /> {t("Insights")} <span class="nav-k">␣ i</span>
     </div>
 
     <!-- Subjects section header -->
     <div class="sb-section-l">
-      <span class="label">Subjects</span>
+        <span class="label">{t("Subjects")}</span>
       <span
         class="add"
         title="New subject"
