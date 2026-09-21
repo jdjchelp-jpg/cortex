@@ -89,6 +89,9 @@ fn ensure_ytdlp(dir: &Path) -> Result<PathBuf> {
     if let Some(p) = crate::ingest::bundled("yt-dlp") {
         return Ok(PathBuf::from(p));
     }
+    #[cfg(windows)]
+    let downloaded = dir.join("bin").join("yt-dlp.exe");
+    #[cfg(not(windows))]
     let downloaded = dir.join("bin").join("yt-dlp");
     if downloaded.is_file() {
         return Ok(downloaded);
@@ -97,6 +100,11 @@ fn ensure_ytdlp(dir: &Path) -> Result<PathBuf> {
         return Ok(p);
     }
     // Download the self-contained build (no system Python needed).
+    #[cfg(windows)]
+    let url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe";
+    #[cfg(target_os = "macos")]
+    let url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos";
+    #[cfg(all(unix, not(target_os = "macos")))]
     let url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
     std::fs::create_dir_all(downloaded.parent().unwrap())?;
     let client = reqwest::blocking::Client::builder()
@@ -226,6 +234,10 @@ pub fn media_tools_status(app: AppHandle) -> Result<MediaTools> {
 #[tauri::command]
 pub fn youtube_play(app: AppHandle, url: String, volume: u8) -> Result<()> {
     let dir = data_dir(&app)?;
+    #[cfg(windows)]
+    {
+        return youtube_play_windows(&dir, &url, volume);
+    }
     let socket = socket_path(&dir);
     let ytdlp = ensure_ytdlp(&dir)?;
     ensure_mpv(&socket, &ytdlp, volume)?;
@@ -261,6 +273,30 @@ pub fn youtube_play(app: AppHandle, url: String, volume: u8) -> Result<()> {
         &socket,
         &json!({ "command": ["set_property", "volume", volume as i64] }),
     )?;
+    Ok(())
+}
+
+/// Windows mpv builds expose IPC through named pipes, not Unix sockets. Keep
+/// playback reliable by treating the mpv child as the transport on Windows;
+/// switching stations terminates the previous child and starts a fresh one.
+#[cfg(windows)]
+fn youtube_play_windows(dir: &Path, url: &str, volume: u8) -> Result<()> {
+    let ytdlp = ensure_ytdlp(dir)?;
+    let holder = mpv_holder();
+    let mut guard = holder.lock().unwrap();
+    if let Some(mut child) = guard.take() {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    let mpv_bin = find_on_path("mpv").unwrap_or_else(|| PathBuf::from("mpv"));
+    let child = Command::new(&mpv_bin)
+        .args(["--no-video", "--no-terminal", "--really-quiet", "--cache=yes"])
+        .arg(format!("--volume={volume}"))
+        .arg(format!("--script-opts=ytdl_hook-ytdl_path={}", ytdlp.display()))
+        .arg(url)
+        .spawn()
+        .map_err(|e| Error::Other(format!("couldn't start mpv — install it and ensure it is on PATH: {e}")))?;
+    *guard = Some(child);
     Ok(())
 }
 

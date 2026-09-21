@@ -168,6 +168,34 @@
   let style      = $state("balanced");
   let explain    = $state<string[]>(["worked-examples","analogies"]);
   let locale     = $state<Locale>("en");
+  type LocalAccount = { id: string; name: string; pronouns: string; level: string; field: string; about: string; style: string; explain: string[] };
+  let accounts = $state<LocalAccount[]>([]);
+  let activeAccountId = $state("");
+  const accountStoreKey = "cortex-local-accounts";
+  function accountSnapshot(): LocalAccount {
+    return { id: activeAccountId || crypto.randomUUID(), name, pronouns, level, field, about, style, explain: [...explain] };
+  }
+  function persistAccounts() {
+    try { localStorage.setItem(accountStoreKey, JSON.stringify(accounts)); } catch { /* unavailable in restricted webviews */ }
+  }
+  function selectAccount(id: string) {
+    const next = accounts.find((a) => a.id === id);
+    if (!next) return;
+    const current = activeAccountId ? accountSnapshot() : null;
+    if (current) accounts = accounts.map((a) => a.id === current.id ? current : a);
+    const chosen = accounts.find((a) => a.id === id)!;
+    activeAccountId = chosen.id; name = chosen.name; pronouns = chosen.pronouns; level = chosen.level; field = chosen.field; about = chosen.about; style = chosen.style; explain = [...chosen.explain];
+    persistAccounts();
+  }
+  function addLocalAccount() {
+    const id = crypto.randomUUID();
+    const next: LocalAccount = { id, name: "New account", pronouns: "they/them", level: "self", field: "", about: "", style: "balanced", explain: [] };
+    accounts = [...accounts, next]; persistAccounts(); selectAccount(id);
+  }
+  function removeLocalAccount() {
+    if (accounts.length <= 1) return;
+    accounts = accounts.filter((a) => a.id !== activeAccountId); persistAccounts(); selectAccount(accounts[0].id);
+  }
   const tr = (text: string) => translate(locale, text);
   $effect(() => { setLocale(locale); document.documentElement.lang = locale; });
 
@@ -1090,7 +1118,12 @@
       if (s.profile_about)     about    = s.profile_about;
       if (s.profile_style)     style    = s.profile_style;
       if (s.profile_explain)   explain  = s.profile_explain.split(",").filter(Boolean);
-      if (s.language === "en" || s.language === "es-419") locale = s.language;
+      if (LOCALES.some((l) => l.id === s.language)) locale = s.language as Locale;
+      try {
+        const stored = JSON.parse(localStorage.getItem(accountStoreKey) ?? "[]") as LocalAccount[];
+        if (stored.length) { accounts = stored; activeAccountId = stored[0].id; }
+        else { const first = accountSnapshot(); accounts = [first]; activeAccountId = first.id; persistAccounts(); }
+      } catch { const first = accountSnapshot(); accounts = [first]; activeAccountId = first.id; }
 
       expMoodle = s.exp_moodle === "true";
       if (s.moodle_url) mdUrl = s.moodle_url;
@@ -1108,6 +1141,9 @@
 
   // ---- helpers ----
   function saveProfile() {
+    const current = accountSnapshot();
+    accounts = accounts.some((a) => a.id === current.id) ? accounts.map((a) => a.id === current.id ? current : a) : [...accounts, current];
+    activeAccountId = current.id; persistAccounts();
     api.setSettings({
       profile_name: name,
       profile_pronouns: pronouns,
@@ -1304,6 +1340,16 @@
 
         <section class="set-group">
           <div class="set-group-h"><h3 class="set-group-t">{tr("Identity")}</h3></div>
+          <div class="set-card">
+            <div class="set-row">
+              <div class="set-row-l"><div class="set-row-t">Local account</div><div class="set-row-d">Profiles stay on this device; study data remains in the shared vault.</div></div>
+              <div class="set-row-r">
+                <Picker value={activeAccountId} onChange={selectAccount} options={accounts.map((a) => ({ id: a.id, label: a.name }))} />
+                <button class="btn btn--sm" type="button" onclick={addLocalAccount}>+ Account</button>
+                <button class="btn btn--sm btn--ghost" type="button" onclick={removeLocalAccount} disabled={accounts.length <= 1}>Remove</button>
+              </div>
+            </div>
+          </div>
           <div class="set-card">
             <div class="set-row">
               <div class="set-row-l"><div class="set-row-t">{tr("Display name")}</div></div>
