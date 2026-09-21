@@ -172,8 +172,12 @@
   let accounts = $state<LocalAccount[]>([]);
   let activeAccountId = $state("");
   const accountStoreKey = "cortex-local-accounts";
+  function newAccountId(): string {
+    const uuid = globalThis.crypto?.randomUUID;
+    return uuid ? uuid.call(globalThis.crypto) : `account-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
   function accountSnapshot(): LocalAccount {
-    return { id: activeAccountId || crypto.randomUUID(), name, pronouns, level, field, about, style, explain: [...explain] };
+    return { id: activeAccountId || newAccountId(), name, pronouns, level, field, about, style, explain: [...explain] };
   }
   function persistAccounts() {
     try { localStorage.setItem(accountStoreKey, JSON.stringify(accounts)); } catch { /* unavailable in restricted webviews */ }
@@ -188,9 +192,10 @@
     persistAccounts();
   }
   function addLocalAccount() {
-    const id = crypto.randomUUID();
+    const id = newAccountId();
     const next: LocalAccount = { id, name: "New account", pronouns: "they/them", level: "self", field: "", about: "", style: "balanced", explain: [] };
     accounts = [...accounts, next]; persistAccounts(); selectAccount(id);
+    app.pushToast({ kind: "success", title: "Local account created", body: "Edit the profile fields, then select Save profile." });
   }
   function removeLocalAccount() {
     if (accounts.length <= 1) return;
