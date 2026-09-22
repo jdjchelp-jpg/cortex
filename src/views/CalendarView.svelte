@@ -167,7 +167,8 @@
       await api.createEvent({ title, startMs, endMs: Number.isFinite(endMs ?? NaN) ? endMs : null, allDay, description: value("DESCRIPTION", block) || null, location: value("LOCATION", block) || null, kind: "event" });
       imported++;
     }
-    await loadEvents();
+    const window = loadWindow();
+    events = await api.listEvents(filterSubjectId || null, window.fromMs, window.toMs);
     app.pushToast({ kind: imported ? "success" : "warning", title: imported ? `Imported ${imported} events` : "No calendar events found" });
   }
 
