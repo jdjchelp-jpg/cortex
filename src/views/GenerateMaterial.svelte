@@ -37,6 +37,8 @@
   let sel   = $state<string[]>([]);
   let title = $state("");
   let customPrompt = $state("");
+  let audioLength = $state<5 | 15 | 30>(15);
+  let audioMode = $state<"podcast" | "audiobook">("podcast");
   // Per-type item count (flashcards / quiz). Seeded from the defaults.
   let cardCount = $state(COUNT_LIMITS.flashcards.def);
   let quizCount = $state(COUNT_LIMITS.quiz.def);
@@ -111,6 +113,9 @@
     const matTitle = finalTitle || undefined;
     const sourceIds = [...sel];
     const count = countValue ?? undefined;
+    const generationPrompt = type === "audio"
+      ? `${customPrompt.trim()}\nAudio format: ${audioMode === "audiobook" ? "dramatic audiobook storytelling with scenes, characters, and narrative pacing" : "two-host study podcast"}. Target length: ${audioLength} minutes.`.trim()
+      : customPrompt.trim();
 
     jobs.start({
       kind,
@@ -123,7 +128,7 @@
           kind as "flashcards" | "quiz" | "audio" | "infographic" | "slideshow" | "mindmap",
           topicId,
           matTitle,
-          customPrompt.trim() || undefined,
+          generationPrompt || undefined,
           sourceIds,
           count,
         ),
@@ -194,6 +199,21 @@
       {/if}
 
       <div class="gm2-block">
+        {#if type === "audio"}
+          <div class="field">
+            <label class="onb-label mono">AUDIO FORMAT</label>
+            <div class="seg">
+              <button class={audioMode === "podcast" ? "seg-opt on" : "seg-opt"} onclick={() => (audioMode = "podcast")}>Study podcast</button>
+              <button class={audioMode === "audiobook" ? "seg-opt on" : "seg-opt"} onclick={() => (audioMode = "audiobook")}>Dramatic audiobook</button>
+            </div>
+            <label class="onb-label mono">LENGTH</label>
+            <div class="seg">
+              {#each [5, 15, 30] as mins}
+                <button class={audioLength === mins ? "seg-opt on" : "seg-opt"} onclick={() => (audioLength = mins as 5 | 15 | 30)}>{mins} min</button>
+              {/each}
+            </div>
+          </div>
+        {/if}
         <div class="field">
           <!-- svelte-ignore a11y_label_has_associated_control -->
           <label class="onb-label mono">TITLE <span class="gm2-label-hint">auto-suggested</span></label>

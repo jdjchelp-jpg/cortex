@@ -26,6 +26,7 @@
 
   // form state
   let f = $state({ ctype: "article", title: "", authors: "", year: "", container: "", url: "", doi: "", notes: "" });
+  let doiBusy = $state(false);
   function resetForm() {
     f = { ctype: "article", title: "", authors: "", year: "", container: "", url: "", doi: "", notes: "" };
   }
@@ -45,6 +46,20 @@
     editing = r.id;
   }
   function cancel() { editing = null; resetForm(); }
+
+  async function lookupDoi() {
+    const doi = f.doi.trim().replace(/^https?:\/\/(dx\.)?doi\.org\//i, "");
+    if (!doi || doiBusy) return;
+    doiBusy = true;
+    try {
+      const res = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}`, { headers: { Accept: "application/json" } });
+      if (!res.ok) throw new Error(`Crossref returned ${res.status}`);
+      const item = (await res.json()).message;
+      f = { ...f, doi, title: f.title || item.title?.[0] || "", authors: f.authors || (item.author ?? []).map((a: { family?: string; given?: string }) => [a.family, a.given].filter(Boolean).join(", ")).join("; "), year: f.year || String(item.published?.["date-parts"]?.[0]?.[0] ?? ""), container: f.container || item["container-title"]?.[0] || "", url: f.url || item.URL || "" };
+      app.pushToast({ kind: "success", title: "DOI details loaded" });
+    } catch (e) { app.pushToast({ kind: "error", title: "DOI lookup failed", body: String(e) }); }
+    finally { doiBusy = false; }
+  }
 
   async function saveForm() {
     if (!subjectId) return;
@@ -501,7 +516,7 @@
       </label>
       <label class="cit-field">
         <span class="onb-label mono">DOI</span>
-        <input class="input" bind:value={f.doi} placeholder="10.xxxx/…" />
+        <div class="row-inline"><input class="input" bind:value={f.doi} placeholder="10.xxxx/…" /><button class="btn btn--sm" type="button" onclick={lookupDoi} disabled={!f.doi.trim() || doiBusy}>{doiBusy ? "…" : "Lookup"}</button></div>
       </label>
       <label class="cit-field cit-field--wide">
         <span class="onb-label mono">URL</span>
