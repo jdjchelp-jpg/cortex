@@ -153,6 +153,23 @@
     a.download = `cortex-${year}-${String(month + 1).padStart(2, "0")}.ics`; a.click(); URL.revokeObjectURL(a.href);
     app.pushToast({ kind: "success", title: `Exported ${events.length} calendar events` });
   }
+  async function importIcs(file: File) {
+    const text = await file.text();
+    const blocks = text.split(/BEGIN:VEVENT\s*/i).slice(1);
+    let imported = 0;
+    const value = (name: string, block: string) => block.match(new RegExp(`(?:^|\\n)${name}(?:;[^:]*)?:([^\\r\\n]+)`, "i"))?.[1]?.trim() ?? "";
+    for (const block of blocks) {
+      const title = value("SUMMARY", block); const start = value("DTSTART", block);
+      if (!title || !start) continue;
+      const allDay = /^\d{8}$/.test(start); const iso = allDay ? `${start.slice(0, 4)}-${start.slice(4, 6)}-${start.slice(6, 8)}T00:00:00` : start.replace(/Z$/, "");
+      const startMs = Date.parse(iso); if (!Number.isFinite(startMs)) continue;
+      const endRaw = value("DTEND", block); const endMs = endRaw ? Date.parse(/^\d{8}$/.test(endRaw) ? `${endRaw.slice(0, 4)}-${endRaw.slice(4, 6)}-${endRaw.slice(6, 8)}T00:00:00` : endRaw.replace(/Z$/, "")) : null;
+      await api.createEvent({ title, startMs, endMs: Number.isFinite(endMs ?? NaN) ? endMs : null, allDay, description: value("DESCRIPTION", block) || null, location: value("LOCATION", block) || null, kind: "event" });
+      imported++;
+    }
+    await loadEvents();
+    app.pushToast({ kind: imported ? "success" : "warning", title: imported ? `Imported ${imported} events` : "No calendar events found" });
+  }
 
   // Loads enough to cover whichever view is active (always the 6-week month grid,
   // which comfortably spans the week/day anchors too since they sync the month).
@@ -491,6 +508,7 @@
         />
       </div>
       <button class="btn btn--sm" type="button" onclick={exportIcs} disabled={!events.length} title="Export visible events as an iCalendar file"><Icon name="download" size={12} /> <span>Export</span></button>
+      <label class="btn btn--sm" title="Import an iCalendar file"><Icon name="upload" size={12} /> <span>Import</span><input hidden type="file" accept=".ics,text/calendar" onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) void importIcs(f); e.currentTarget.value = ""; }} /></label>
       <button class="btn btn--primary btn--sm" type="button" onclick={() => openCreate(addTarget())}>
         <Icon name="plus" size={12} />
         <span>New</span>

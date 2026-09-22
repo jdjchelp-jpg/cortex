@@ -14,7 +14,7 @@
 
   // ── references ────────────────────────────────────────────────
   let refs = $state<Reference[]>([]);
-  let style = $state<"harvard" | "apa" | "mla">("harvard"); // Harvard is the default
+  let style = $state<"harvard" | "apa" | "mla" | "chicago" | "ieee" | "vancouver" | "apsa">("harvard"); // Harvard is the default
   let editing = $state<string | null>(null); // ref id being edited, or "new"
 
   const CTYPES = [
@@ -104,7 +104,11 @@
     else if (r.url) parts.push(`Available at: ${r.url.trim()}.`);
     return parts.join(" ").replace(/\s+/g, " ").trim();
   }
-  const fmt = $derived(style === "harvard" ? formatHarvard : style === "apa" ? formatApa : formatMla);
+  function formatChicago(r: Reference): string { return [r.authors, `“${r.title}.”`, r.container, r.year, r.doi ? `https://doi.org/${r.doi}` : r.url].filter(Boolean).join(" ").replace(/\s+/g, " ").trim() + "."; }
+  function formatIeee(r: Reference): string { return [r.authors, `“${r.title},”`, r.container, r.year, r.doi ? `doi: ${r.doi}` : r.url].filter(Boolean).join(", ").replace(/\s+/g, " ").trim() + "."; }
+  function formatVancouver(r: Reference): string { return [r.authors, r.title, r.container, r.year, r.doi ? `doi:${r.doi}` : r.url].filter(Boolean).join(". ").replace(/\s+/g, " ").trim() + "."; }
+  function formatApsa(r: Reference): string { return [r.authors, r.year ? `(${r.year}).` : "", r.title + ".", r.container, r.url ?? (r.doi ? `https://doi.org/${r.doi}` : "")].filter(Boolean).join(" ").replace(/\s+/g, " ").trim(); }
+  const fmt = $derived(style === "harvard" ? formatHarvard : style === "apa" ? formatApa : style === "mla" ? formatMla : style === "chicago" ? formatChicago : style === "ieee" ? formatIeee : style === "vancouver" ? formatVancouver : formatApsa);
 
   async function copyOne(r: Reference) {
     try { await navigator.clipboard.writeText(fmt(r)); app.pushToast({ kind: "success", title: "Citation copied" }); }
@@ -419,6 +423,10 @@
           <button class={style === "harvard" ? "on" : ""} onclick={() => (style = "harvard")}>Harvard</button>
           <button class={style === "apa" ? "on" : ""} onclick={() => (style = "apa")}>APA</button>
           <button class={style === "mla" ? "on" : ""} onclick={() => (style = "mla")}>MLA</button>
+          <button class={style === "chicago" ? "on" : ""} onclick={() => (style = "chicago")}>Chicago</button>
+          <button class={style === "ieee" ? "on" : ""} onclick={() => (style = "ieee")}>IEEE</button>
+          <button class={style === "vancouver" ? "on" : ""} onclick={() => (style = "vancouver")}>Vancouver</button>
+          <button class={style === "apsa" ? "on" : ""} onclick={() => (style = "apsa")}>APSA</button>
         </div>
         <button class="btn btn--sm" disabled={refs.length === 0} onclick={copyAll} title="Copy the full bibliography">
           <Icon name="doc" size={12} /> Copy all
