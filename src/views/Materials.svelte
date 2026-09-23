@@ -250,6 +250,13 @@
         >
           <Icon name="bolt" size={12} /> Generate material
         </button>
+        <button
+          class="btn btn--sm"
+          onclick={() => app.setView("gen-material")}
+          title="Create a narrated audiobook from this subject"
+        >
+          <Icon name="music" size={12} /> Audiobook
+        </button>
       </div>
 
       {#each matJobs as job (job.id)}

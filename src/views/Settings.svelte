@@ -1364,9 +1364,11 @@
             <div class="set-row">
               <div class="set-row-l"><div class="set-row-t">Local account</div><div class="set-row-d">Profiles stay on this device; study data remains in the shared vault.</div></div>
               <div class="set-row-r">
-                <Picker value={activeAccountId} onChange={selectAccount} options={accounts.map((a) => ({ id: a.id, label: a.name }))} />
-                <button class="btn btn--sm" type="button" onclick={addLocalAccount}>+ Account</button>
-                <button class="btn btn--sm btn--ghost" type="button" onclick={removeLocalAccount} disabled={accounts.length <= 1}>Remove</button>
+                <div class="account-actions">
+                  <Picker value={activeAccountId} onChange={selectAccount} options={accounts.map((a) => ({ id: a.id, label: a.name }))} />
+                  <button class="btn btn--sm" type="button" onclick={addLocalAccount}>+ Account</button>
+                  <button class="btn btn--sm btn--ghost" type="button" onclick={removeLocalAccount} disabled={accounts.length <= 1}>Remove</button>
+                </div>
               </div>
             </div>
           </div>

@@ -114,6 +114,10 @@
       loadSources();
     }
   }
+  async function addSubtopic(parentName: string) {
+    const name = await app.prompt({ title: `Add subtopic to ${parentName}`, label: "Subtopic name", placeholder: "e.g. Examples" });
+    if (name?.trim()) { await app.createTopic(`${parentName} / ${name.trim()}`); loadSources(); }
+  }
   const groups = $derived.by(() => {
     const m = new Map<string, Source[]>();
     for (const s of srcList) {
@@ -337,6 +341,9 @@
                       onclick={() => editTopicGroup(g.key, g.name)}
                     >
                       <Icon name="pencil" size={12} />
+                    </button>
+                    <button class="btn btn--icon btn--sm btn--ghost" title="Add subtopic" onclick={() => addSubtopic(g.name)}>
+                      <Icon name="plus" size={12} />
                     </button>
                     {#if g.items.length === 0}
                       <button
