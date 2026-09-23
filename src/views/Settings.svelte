@@ -311,6 +311,9 @@
   ];
   let readFont      = $state("mono");
   let density       = $state("regular");
+  let highContrast  = $state(false);
+  let dyslexiaFont  = $state(false);
+  let reducedMotion = $state(false);
 
   // Settings is the ONLY view that mutates the <html> root. Writing an attribute on
   // documentElement invalidates styles for the ENTIRE document, forcing WebKit
@@ -326,6 +329,12 @@
   });
   $effect(() => {
     const el = document.documentElement;
+    el.toggleAttribute("data-high-contrast", highContrast);
+    el.toggleAttribute("data-dyslexia", dyslexiaFont);
+    el.toggleAttribute("data-reduced-motion", reducedMotion);
+  });
+  $effect(() => {
+    const el = document.documentElement;
     const v = density === "compact" ? "compact" : "regular";
     if (el.getAttribute("data-density") !== v) el.setAttribute("data-density", v);
   });
@@ -335,8 +344,11 @@
     // track both values
     const rf = readFont;
     const d  = density;
+    const hc = highContrast;
+    const df = dyslexiaFont;
+    const rm = reducedMotion;
     if (!loaded) return;
-    api.setSettings({ reading_font: rf, density: d }).catch(() => {});
+    api.setSettings({ reading_font: rf, density: d, high_contrast: String(hc), dyslexia_font: String(df), reduced_motion: String(rm) }).catch(() => {});
   });
 
   // ---- keybinds state ----
@@ -1115,6 +1127,9 @@
       // Appearance
       if (s.reading_font)   readFont      = s.reading_font;
       if (s.density)        density       = s.density;
+      highContrast = s.high_contrast === "true";
+      dyslexiaFont = s.dyslexia_font === "true";
+      reducedMotion = s.reduced_motion === "true";
       // Window behaviour (default ON: closing hides to the tray)
       if (s.close_to_tray !== undefined) closeToTray = s.close_to_tray !== "false";
 
@@ -1501,6 +1516,14 @@
                 </div>
               {/each}
             {/if}
+            <div class="set-row">
+              <div class="set-row-l"><div class="set-row-t">Accessibility</div><div class="set-row-d">Improve contrast, reading comfort, and motion sensitivity.</div></div>
+              <div class="set-row-r" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+                <button type="button" class="st-toggle{highContrast ? ' on' : ''}" role="switch" aria-checked={highContrast} onclick={() => (highContrast = !highContrast)}><span class="st-knob"></span><span class="mono">High contrast</span></button>
+                <button type="button" class="st-toggle{dyslexiaFont ? ' on' : ''}" role="switch" aria-checked={dyslexiaFont} onclick={() => (dyslexiaFont = !dyslexiaFont)}><span class="st-knob"></span><span class="mono">Dyslexia-friendly</span></button>
+                <button type="button" class="st-toggle{reducedMotion ? ' on' : ''}" role="switch" aria-checked={reducedMotion} onclick={() => (reducedMotion = !reducedMotion)}><span class="st-knob"></span><span class="mono">Reduce motion</span></button>
+              </div>
+            </div>
           </div>
         </section>
 

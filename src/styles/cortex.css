@@ -769,3 +769,29 @@ html[dir="rtl"] .sidebar .sb-key,
 html[dir="rtl"] .sidebar .nav-k {
   direction: ltr;
 }
+
+html[data-high-contrast] {
+  --fg: #f5f7ff;
+  --fg-muted: #e2e7ff;
+  --fg-faint: #c4ccef;
+  --border: #7480a8;
+  --border-strong: #aab6e8;
+}
+
+html[data-dyslexia] body,
+html[data-dyslexia] button,
+html[data-dyslexia] input,
+html[data-dyslexia] textarea,
+html[data-dyslexia] select {
+  letter-spacing: 0.025em;
+  line-height: 1.55;
+}
+
+html[data-reduced-motion] *,
+html[data-reduced-motion] *::before,
+html[data-reduced-motion] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.001ms !important;
+}
