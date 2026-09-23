@@ -267,6 +267,9 @@
                     {#if allOn}<Icon name="check" size={11} />{:else if someOn}<span class="gm-dash"></span>{/if}
                   </button>
                   <span class="gm-topic-name mono">{topic.name}</span>
+                  {#if topic.name.includes("/")}
+                    <span class="badge badge--text mono" title="This is a subtopic">Subtopic</span>
+                  {/if}
                   <span class="faint mono">{topic.sources.length}</span>
                 </div>
                 <div class="gm-src-list">

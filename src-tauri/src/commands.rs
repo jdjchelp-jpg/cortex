@@ -2724,7 +2724,7 @@ pub async fn generate_material(
             None => "Host".to_string(),
         }
     };
-    let (context, subject_name, topic_name, spec, keys, style, host_a, host_b) = {
+    let (context, subject_name, topic_name, topic_outline, spec, keys, style, host_a, host_b) = {
         let c = state.db.lock().unwrap();
         // The user's explicit source selection is authoritative: scope context to
         // exactly those sources (ignoring topic, since a selection can span topics).
@@ -2742,12 +2742,16 @@ pub async fn generate_material(
             .or_else(|| subj.topics.first())
             .map(|t| t.name.clone())
             .unwrap_or_default();
+        let topic_outline = subj.topics.iter()
+            .map(|t| t.name.clone())
+            .collect::<Vec<_>>()
+            .join(" | ");
         let spec = repo::get_setting(&c, setting_key)?
             .unwrap_or_else(|| "openrouter:deepseek/deepseek-v4-flash".into());
         guard_offline_llm(&c, &spec)?;
         let host_a = cap(repo::get_setting(&c, "voice_a")?.unwrap_or_else(|| "maya".into()));
         let host_b = cap(repo::get_setting(&c, "voice_b")?.unwrap_or_else(|| "theo".into()));
-        (ctx, subj.name, tname, spec, read_keys(&c)?, style_instruction(&c), host_a, host_b)
+        (ctx, subj.name, tname, topic_outline, spec, read_keys(&c)?, style_instruction(&c), host_a, host_b)
     };
     let mut model = llm::from_spec_or_any(&spec, &keys).ok_or_else(|| Error::Other(NO_MODEL.into()))?;
     {
@@ -2779,10 +2783,12 @@ pub async fn generate_material(
         ),
         "audio" => (
             format!(
-                "You write a two-host podcast-style audio overview script from study material. \
+                "You write a two-host study audiobook or podcast script from study material. \
                  The two hosts are named {host_a} and {host_b}. Output ONLY JSON: \
                  {{\"segments\":[{{\"speaker\":\"{host_a}\"|\"{host_b}\",\"text\":\"...\"}}]}}. 12-20 \
-                 lively, accurate segments that teach the material conversationally. No prose outside JSON."
+                 lively, accurate segments that teach the material conversationally. If the user asks for \
+                 a dramatic audiobook, use vivid narrative pacing and clearly teach every topic and subtopic; \
+                 include the topic/subtopic name naturally when introducing each section. No prose outside JSON."
             ),
             format!("{topic_name} — audio overview"),
         ),
@@ -2848,7 +2854,7 @@ pub async fn generate_material(
         "{system}{style} Respond with ONLY raw JSON — no markdown code fences, no prose before or after.{custom}",
         custom = custom_focus(custom_prompt.as_deref())
     );
-    let user = format!("Subject: {subject_name} › {topic_name}\n\nSOURCE MATERIAL:\n{context}\n\nGenerate now.");
+    let user = format!("Subject: {subject_name} › {topic_name}\nAvailable topics and subtopics: {topic_outline}\n\nSOURCE MATERIAL:\n{context}\n\nGenerate now. Preserve and clearly name the topic/subtopic structure in the output.");
 
     let raw = model.complete(&system, &user)?;
     let payload = llm::extract_json(&raw)
