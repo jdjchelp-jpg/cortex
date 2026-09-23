@@ -71,7 +71,13 @@ const commonCopy: Record<Locale, Record<string, string>> = {
 // runtime identifier and crash the production WebView.
 export let activeLocale: Locale = "en";
 
-export function setLocale(locale: Locale): void { activeLocale = locale; }
+export function setLocale(locale: Locale): void {
+  activeLocale = locale;
+  if (typeof document !== "undefined") {
+    document.documentElement.lang = locale;
+    document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
+  }
+}
 
 export function translate(locale: Locale, text: string): string {
   const nav: Record<string, Partial<Record<Locale, string>>> = {

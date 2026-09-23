@@ -146,6 +146,11 @@
       const key = s.topic_id ?? "__none__";
       (m.get(key) ?? m.set(key, []).get(key)!).push(s);
     }
+    // Keep empty topics visible so a newly-created subtopic can receive its
+    // first source/material instead of disappearing from the Sources view.
+    for (const topic of subj?.topics ?? []) {
+      if (!m.has(topic.id)) m.set(topic.id, []);
+    }
     return [...m.entries()].map(([k, items]) => ({
       key: k,
       name: k === "__none__" ? "Ungrouped" : (subj?.topics.find((t) => t.id === k)?.name ?? "Ungrouped"),
@@ -366,6 +371,9 @@
                       onclick={() => editTopicGroup(g.key, g.name)}
                     >
                       <Icon name="pencil" size={12} />
+                    </button>
+                    <button class="btn btn--sm btn--ghost" title="Add a source to this topic" onclick={() => app.newSourceInTopic(g.key)}>
+                      <Icon name="plus" size={12} /> Source
                     </button>
                     <button class="btn btn--sm btn--ghost" title="Add subtopic" onclick={() => addSubtopic(g.name)}>
                       <Icon name="plus" size={12} /> Subtopic

@@ -2772,6 +2772,7 @@ pub async fn generate_material(
     let card_n = count.unwrap_or(14).clamp(4, 40);
 
     // Per-kind prompt + payload shape.
+    let audiobook = custom_prompt.as_deref().is_some_and(|p| p.to_ascii_lowercase().contains("audiobook"));
     let (system, default_title) = match kind.as_str() {
         "quiz" => (
             format!(
@@ -2782,14 +2783,24 @@ pub async fn generate_material(
             format!("{topic_name} quiz"),
         ),
         "audio" => (
-            format!(
-                "You write a two-host study audiobook or podcast script from study material. \
-                 The two hosts are named {host_a} and {host_b}. Output ONLY JSON: \
-                 {{\"segments\":[{{\"speaker\":\"{host_a}\"|\"{host_b}\",\"text\":\"...\"}}]}}. 12-20 \
-                 lively, accurate segments that teach the material conversationally. If the user asks for \
-                 a dramatic audiobook, use vivid narrative pacing and clearly teach every topic and subtopic; \
-                 include the topic/subtopic name naturally when introducing each section. No prose outside JSON."
-            ),
+            if audiobook {
+                format!(
+                    "You write a novel-like educational audiobook narrated by one person, {host_a}. \
+                     The narrator may perform dialogue by other characters, but every segment MUST use \
+                     speaker \"{host_a}\" so one voice is used. Output ONLY JSON: \
+                     {{\"segments\":[{{\"speaker\":\"{host_a}\",\"text\":\"...\"}}]}}. Write a deep, \
+                     vivid story with scenes, character dialogue, and narrative pacing while teaching \
+                     every topic and subtopic. Name each topic/subtopic when introducing its section. \
+                     No prose outside JSON."
+                )
+            } else {
+                format!(
+                    "You write a two-host study podcast script from study material. The two hosts are \
+                     named {host_a} and {host_b}. Output ONLY JSON: \
+                     {{\"segments\":[{{\"speaker\":\"{host_a}\"|\"{host_b}\",\"text\":\"...\"}}]}}. 12-20 \
+                     lively, accurate segments that teach the material conversationally. No prose outside JSON."
+                )
+            },
             format!("{topic_name} — audio overview"),
         ),
         "infographic" => (

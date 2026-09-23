@@ -478,6 +478,12 @@
             <span class="pom-set-unit mono">min</span>
           </div>
           <div class="pom-set-note mono">Long break every {pomo.sessionsBeforeLong}th focus session · {pomo.completedSessions} done today.</div>
+          <label class="pom-set-toggle mono">
+            <input type="checkbox" bind:checked={pomo.autoStartNextPhase} /> Auto-start next phase
+          </label>
+          <label class="pom-set-toggle mono">
+            <input type="checkbox" bind:checked={pomo.breakReminders} /> Break reminders
+          </label>
         </div>
       {/if}
     </div>

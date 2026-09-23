@@ -146,6 +146,8 @@ class PomoTimer {
   breakMin = $state(5);
   longBreakMin = $state(15);
   sessionsBeforeLong = $state(4);
+  autoStartNextPhase = $state(true);
+  breakReminders = $state(true);
 
   remainingMs = $state(25 * 60_000);
 
@@ -232,7 +234,9 @@ class PomoTimer {
     this.remainingMs = this.totalMs();
     this.#lastAt = endedMs;
     this.#segmentStartedMs = endedMs; // the next phase's segment starts now
-    this.running = true; // auto-continue into the next phase
+    this.running = this.autoStartNextPhase;
+    if (this.running) this.#ensureInterval();
+    else this.#stopInterval();
     this.#onPhaseChange?.(this.phase);
   }
 
@@ -686,6 +690,7 @@ class AppStore {
     });
     // Toast on every focus↔break transition.
     this.pomo.onPhaseChange((to) => {
+      if (to !== "work" && !this.pomo.breakReminders) return;
       if (to === "work") {
         this.pushToast({ kind: "info", title: "Back to focus", body: `Session ${this.pomo.cycle} — let's go.` });
       } else {

@@ -757,3 +757,15 @@ a { color: inherit; }
 [data-density="compact"] .chat-scroll { gap: 11px; }
 [data-density="compact"] .cs-item { grid-template-columns: 168px 1fr; }
 [data-hints="off"] .kbd, [data-hints="off"] .nav-k, [data-hints="off"] .compose-hint { display: none !important; }
+html[dir="rtl"] .sidebar,
+html[dir="rtl"] .settings,
+html[dir="rtl"] .subject-view,
+html[dir="rtl"] .genmat2,
+html[dir="rtl"] .pom-modal {
+  direction: rtl;
+}
+
+html[dir="rtl"] .sidebar .sb-key,
+html[dir="rtl"] .sidebar .nav-k {
+  direction: ltr;
+}
