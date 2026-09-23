@@ -1,4 +1,19 @@
 const $ = (id) => document.getElementById(id);
+const fallback = { Biology: ["Cell biology / Membranes", "Genetics"], Mathematics: ["Algebra", "Geometry"] };
+let structure = fallback;
+function renderChoices() {
+  const subjects = Object.keys(structure);
+  $("subject").innerHTML = subjects.map(s => `<option>${s}</option>`).join("") || '<option value="">Add a subject</option>';
+  const topics = structure[$("subject").value] || [];
+  $("topic").innerHTML = topics.map(t => `<option>${t}</option>`).join("") || '<option value="">Add a topic</option>';
+  const full = $("topic").value;
+  const parts = full.split("/").map(x => x.trim());
+  $("subtopic").innerHTML = (parts[1] ? `<option>${parts[1]}</option>` : '<option value="">No subtopic</option>');
+}
+chrome.storage.local.get({ cortexStructure: fallback }, (data) => { structure = data.cortexStructure || fallback; renderChoices(); });
+$("subject").onchange = renderChoices;
+$("topic").onchange = renderChoices;
+for (const [id, message] of [["addSubject", "Subject name"], ["addTopic", "Topic or subtopic name"], ["addSubtopic", "Subtopic name"]]) $(id).onclick = () => { const name = prompt(message); if (!name?.trim()) return; const subject = $("subject").value || name.trim(); if (id === "addSubject") structure[name.trim()] = []; else { if (!structure[subject]) structure[subject] = []; structure[subject].push(id === "addSubtopic" && $("topic").value ? `${$("topic").value.split("/")[0].trim()} / ${name.trim()}` : name.trim()); } chrome.storage.local.set({ cortexStructure: structure }, renderChoices); };
 $("capture").onclick = async () => {
   const button = $("capture");
   button.disabled = true;
@@ -11,7 +26,7 @@ $("capture").onclick = async () => {
       return { pageTitle: document.title, pageUrl: location.href, items: [...new Map(items.map(x => [x.url, x])).values()] };
     }});
     const data = result[0].result;
-    const bundle = { format: "cortex-classroom-capture", version: 1, capturedAt: new Date().toISOString(), subject: $("subject").value.trim(), topic: $("topic").value.trim(), ...data };
+    const bundle = { format: "cortex-classroom-capture", version: 1, capturedAt: new Date().toISOString(), subject: $("subject").value.trim(), topic: $("topic").value.trim(), subtopic: $("subtopic").value.trim(), ...data };
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     await chrome.downloads.download({ url, filename: `cortex-${(bundle.subject || "classroom").replace(/[^a-z0-9]+/gi, "-")}.cortex.json`, saveAs: true });
