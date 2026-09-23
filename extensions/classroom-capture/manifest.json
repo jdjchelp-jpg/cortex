@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Cortex Classroom Capture",
+  "version": "0.1.0",
+  "description": "Collect Google Classroom links and files for import into Cortex.",
+  "permissions": ["activeTab", "scripting", "downloads", "storage"],
+  "host_permissions": ["https://classroom.google.com/*"],
+  "action": { "default_title": "Capture for Cortex", "default_popup": "popup.html" },
+  "content_scripts": [{ "matches": ["https://classroom.google.com/*"], "js": ["content.js"], "run_at": "document_idle" }]
+}
