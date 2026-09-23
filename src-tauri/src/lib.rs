@@ -6,6 +6,7 @@ mod analytics;
 mod anki;
 mod asr;
 mod backup;
+mod bridge;
 mod calendar;
 mod commands;
 mod db;
@@ -104,6 +105,7 @@ pub fn run() {
             }
 
             app.manage(state);
+            bridge::start(app.handle());
 
             // LIVE sync: a SQLite update hook flags every local write; the
             // livesync push worker debounces them into tiny deltas for the

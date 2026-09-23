@@ -1,6 +1,25 @@
 const $ = (id) => document.getElementById(id);
 const fallback = { Biology: ["Cell biology / Membranes", "Genetics"], Mathematics: ["Algebra", "Geometry"] };
 let structure = fallback;
+const syncButton = document.createElement("button");
+syncButton.textContent = "Sync subjects from Cortex";
+syncButton.className = "mini";
+syncButton.style.marginBottom = "12px";
+document.querySelector(".card").prepend(syncButton);
+syncButton.onclick = async () => {
+  syncButton.disabled = true;
+  try {
+    const response = await fetch("http://127.0.0.1:47821/api/classroom/structure", { headers: { "X-Cortex-Bridge": "cortex-local" } });
+    if (!response.ok) throw new Error("Cortex bridge unavailable");
+    const data = await response.json();
+    structure = Object.fromEntries((data.subjects || []).map(s => [s.name, (s.topics || []).map(t => t.name)]));
+    await chrome.storage.local.set({ cortexStructure: structure });
+    renderChoices();
+    $("status").className = "status ok";
+    $("status").textContent = `Synced ${Object.keys(structure).length} subjects from Cortex.`;
+  } catch (e) { $("status").className = "status err"; $("status").textContent = "Open Cortex first, then try Sync again."; }
+  finally { syncButton.disabled = false; }
+};
 function renderChoices() {
   const subjects = Object.keys(structure);
   $("subject").innerHTML = subjects.map(s => `<option>${s}</option>`).join("") || '<option value="">Add a subject</option>';
