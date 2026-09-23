@@ -1155,6 +1155,8 @@ class AppStore {
   setView(v: View) {
     this.view = v;
   }
+  // Optional format used when a view opens the material generator.
+  materialLaunchType = $state<string | null>(null);
   setTab(t: string) {
     this.subjectTab = t;
   }

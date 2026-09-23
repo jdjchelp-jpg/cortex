@@ -252,7 +252,7 @@
         </button>
         <button
           class="btn btn--sm"
-          onclick={() => app.setView("gen-material")}
+          onclick={() => { app.materialLaunchType = "audio"; app.setView("gen-material"); }}
           title="Create a narrated audiobook from this subject"
         >
           <Icon name="music" size={12} /> Audiobook

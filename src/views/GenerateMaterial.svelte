@@ -33,12 +33,12 @@
   );
 
   // ── State ─────────────────────────────────────────────────────
-  let type  = $state<string>("flashcards");
+  let type  = $state<string>(app.materialLaunchType ?? "flashcards");
   let sel   = $state<string[]>([]);
   let title = $state("");
   let customPrompt = $state("");
   let audioLength = $state<5 | 15 | 30>(15);
-  let audioMode = $state<"podcast" | "audiobook">("podcast");
+  let audioMode = $state<"podcast" | "audiobook">(app.materialLaunchType === "audio" ? "audiobook" : "podcast");
   // Per-type item count (flashcards / quiz). Seeded from the defaults.
   let cardCount = $state(COUNT_LIMITS.flashcards.def);
   let quizCount = $state(COUNT_LIMITS.quiz.def);

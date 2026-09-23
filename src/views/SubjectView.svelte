@@ -118,6 +118,28 @@
     const name = await app.prompt({ title: `Add subtopic to ${parentName}`, label: "Subtopic name", placeholder: "e.g. Examples" });
     if (name?.trim()) { await app.createTopic(`${parentName} / ${name.trim()}`); loadSources(); }
   }
+  async function addSubtopicFromToolbar() {
+    const value = await app.prompt({
+      title: "Add subtopic",
+      label: "Parent topic / subtopic",
+      placeholder: "e.g. Calculus / Limits",
+    });
+    if (!value?.trim()) return;
+    const parts = value.split("/");
+    const parent = parts.shift()?.trim() ?? "";
+    const child = parts.join("/").trim();
+    const topicExists = (subj?.topics ?? []).some((t) => t.name.toLowerCase() === parent.toLowerCase());
+    if (!parent || !child) {
+      app.pushToast({ kind: "warning", title: "Use Parent topic / subtopic" });
+      return;
+    }
+    if (!topicExists) {
+      app.pushToast({ kind: "warning", title: `Topic not found: ${parent}`, body: "Create the parent topic first." });
+      return;
+    }
+    await app.createTopic(`${parent} / ${child}`);
+    loadSources();
+  }
   const groups = $derived.by(() => {
     const m = new Map<string, Source[]>();
     for (const s of srcList) {
@@ -297,6 +319,9 @@
               <button class="btn btn--sm btn--ghost" onclick={addTopic}>
                 <Icon name="plus" size={12} /> Add topic
               </button>
+              <button class="btn btn--sm btn--ghost" onclick={addSubtopicFromToolbar} title="Add a subtopic under an existing topic">
+                <Icon name="plus" size={12} /> Subtopic
+              </button>
               <button class="btn btn--sm btn--primary" onclick={() => app.setView("add-source")}>
                 <Icon name="plus" size={12} /> Add source
               </button>
@@ -342,8 +367,8 @@
                     >
                       <Icon name="pencil" size={12} />
                     </button>
-                    <button class="btn btn--icon btn--sm btn--ghost" title="Add subtopic" onclick={() => addSubtopic(g.name)}>
-                      <Icon name="plus" size={12} />
+                    <button class="btn btn--sm btn--ghost" title="Add subtopic" onclick={() => addSubtopic(g.name)}>
+                      <Icon name="plus" size={12} /> Subtopic
                     </button>
                     {#if g.items.length === 0}
                       <button
