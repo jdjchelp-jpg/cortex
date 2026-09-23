@@ -1,6 +1,9 @@
 const $ = (id) => document.getElementById(id);
 $("capture").onclick = async () => {
-  $("status").textContent = "Collecting…";
+  const button = $("capture");
+  button.disabled = true;
+  $("status").className = "status";
+  $("status").textContent = "Reading the active Classroom page…";
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const result = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => {
@@ -12,6 +15,8 @@ $("capture").onclick = async () => {
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     await chrome.downloads.download({ url, filename: `cortex-${(bundle.subject || "classroom").replace(/[^a-z0-9]+/gi, "-")}.cortex.json`, saveAs: true });
-    $("status").textContent = `Captured ${bundle.items.length} links/files. Import the .cortex.json bundle into Cortex.`;
-  } catch (e) { $("status").textContent = `Capture failed: ${e.message}`; }
+    $("status").className = "status ok";
+    $("status").textContent = `Captured ${bundle.items.length} links/files. Your Cortex bundle is ready.`;
+  } catch (e) { $("status").className = "status err"; $("status").textContent = `Capture failed: ${e.message}`; }
+  finally { button.disabled = false; }
 };
