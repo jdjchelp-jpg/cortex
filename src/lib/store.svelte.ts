@@ -19,6 +19,7 @@ export type View =
   | "notes"
   | "calendar"
   | "analytics"
+  | "games"
   | "exam"
   | "settings";
 export type Mode = "NOR" | "INS" | "SEL";

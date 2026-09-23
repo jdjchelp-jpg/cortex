@@ -36,6 +36,7 @@
   import GenerateMaterial from "./views/GenerateMaterial.svelte";
   import NotesView from "./views/NotesView.svelte";
   import Onboarding from "./views/Onboarding.svelte";
+  import Games from "./views/Games.svelte";
 
   // The three heaviest views (Settings 70KB, Recorder 32KB, Calendar 31KB) are
   // code-split out of the startup bundle and loaded on first visit. They're
@@ -360,6 +361,8 @@
           {#if CalendarViewC}{@const CalendarView = CalendarViewC}<CalendarView />{/if}
         {:else if app.view === "analytics"}
           {#if AnalyticsViewC}{@const AnalyticsView = AnalyticsViewC}<AnalyticsView />{/if}
+        {:else if app.view === "games"}
+          <Games />
         {:else if app.view === "exam"}
           {#if ExamViewC}{@const ExamView = ExamViewC}<ExamView />{/if}
         {:else if app.view === "settings"}

@@ -1,0 +1,22 @@
+<script lang="ts">
+  import { app } from "../lib/store.svelte";
+  import Icon from "../components/Icon.svelte";
+  type Game = "2048" | "quiz";
+  let game = $state<Game>("2048");
+  let board = $state<number[]>([]);
+  let score = $state(0);
+  let cells = $state<string[]>(Array(9).fill(""));
+  let turn = $state<"X" | "O">("X");
+  const topics = $derived(app.activeSubject?.topics ?? []);
+  const subject = $derived(app.activeSubject?.name ?? "your subject");
+  function spawn(a: number[]) { const e=a.map((v,i)=>v? -1:i).filter(i=>i>=0); if(e.length)a[e[Math.floor(Math.random()*e.length)]]=Math.random()<.9?2:4; return a; }
+  function reset() { score=0; board=spawn(spawn(Array(16).fill(0))); }
+  function slide(r:number[]) { const a=r.filter(Boolean); for(let i=0;i<a.length-1;i++)if(a[i]===a[i+1]){a[i]*=2;score+=a[i];a.splice(i+1,1);} return [...a,...Array(4-a.length).fill(0)]; }
+  function move(d:"left"|"right"|"up"|"down") { const old=[...board], n=Array(16).fill(0); for(let l=0;l<4;l++){let r=d==="left"||d==="right"?[0,1,2,3].map(i=>old[l*4+i]):[0,1,2,3].map(i=>old[i*4+l]);if(d==="right"||d==="down")r.reverse();r=slide(r);if(d==="right"||d==="down")r.reverse();r.forEach((v,i)=>{if(d==="left"||d==="right")n[l*4+i]=v;else n[i*4+l]=v;});}if(n.some((v,i)=>v!==old[i]))board=spawn(n); }
+  function resetQuiz(){cells=Array(9).fill("");turn="X";}
+  async function claim(i:number){if(cells[i])return;const topic=topics[i%Math.max(1,topics.length)]?.name??subject;const answer=await app.prompt({title:`Quiz square: ${topic}`,label:"Write a short answer",placeholder:"What did you learn?"});if(answer?.trim()){cells[i]=turn;cells=[...cells];turn=turn==="X"?"O":"X";}}
+  $effect(()=>{if(!board.length)reset();});
+</script>
+<svelte:window onkeydown={(e)=>{const m:Record<string,"left"|"right"|"up"|"down">={ArrowLeft:"left",ArrowRight:"right",ArrowUp:"up",ArrowDown:"down"};if(game==="2048"&&m[e.key]){e.preventDefault();move(m[e.key]);}}}/>
+<div class="games-page"><header><div class="eyebrow">Phase 2 · Learn by playing</div><h1>Study games</h1><p class="mono faint">Practice {subject} with short game rounds.</p></header><div class="games-tabs"><button class:active={game==="2048"} onclick={()=>game="2048"}>2048 Recall</button><button class:active={game==="quiz"} onclick={()=>game="quiz"}>Quiz Tic-Tac-Toe</button></div>{#if game==="2048"}<section class="game-card"><div class="game-card-head"><div><h2>2048 Recall</h2><p class="mono faint">Merge tiles while reviewing. Use arrow keys.</p></div><span class="mono">Score {score}</span></div><div class="tile-board">{#each board as v}<div class="tile" class:filled={v>0}>{v||""}</div>{/each}</div><button class="btn btn--primary" onclick={reset}><Icon name="refresh" size={12}/> New round</button></section>{:else}<section class="game-card"><div class="game-card-head"><div><h2>Quiz Tic-Tac-Toe</h2><p class="mono faint">Answer a topic question to claim a square.</p></div><span class="mono">Turn {turn}</span></div><div class="ttt-board">{#each cells as v,i}<button class="ttt-cell" class:claimed={!!v} onclick={()=>claim(i)}>{v||"?"}</button>{/each}</div><button class="btn" onclick={resetQuiz}><Icon name="refresh" size={12}/> New board</button></section>{/if}</div>
+<style>.games-page{height:100%;overflow:auto;max-width:900px;margin:auto;padding:34px 28px}.games-page h1{color:var(--fg-bright)}.games-tabs{display:flex;gap:8px;margin:22px 0}.games-tabs button{padding:9px 14px;background:var(--surface);border:1px solid var(--border);color:var(--fg-muted);border-radius:var(--rad-2);cursor:pointer}.games-tabs button.active{border-color:var(--accent);color:var(--accent)}.game-card{max-width:560px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-3);padding:22px}.game-card-head{display:flex;justify-content:space-between;margin-bottom:18px}.game-card h2{margin:0;color:var(--fg-bright)}.tile-board,.ttt-board{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:var(--bg-sunken);padding:10px;margin-bottom:18px}.tile{aspect-ratio:1;display:grid;place-items:center;background:var(--surface-2);color:var(--fg-bright);font-size:22px;font-weight:700;border-radius:var(--rad-2)}.tile.filled{background:color-mix(in oklab,var(--accent) 35%,var(--surface-2))}.ttt-board{grid-template-columns:repeat(3,1fr);max-width:360px}.ttt-cell{aspect-ratio:1;background:var(--surface-2);border:1px solid var(--border);color:var(--accent);font-size:30px;cursor:pointer}.ttt-cell.claimed{color:var(--fg-bright)}</style>

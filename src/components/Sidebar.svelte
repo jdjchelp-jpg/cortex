@@ -180,6 +180,9 @@
     >
         <Icon name="chart" size={14} /> {t("Insights")} <span class="nav-k">␣ i</span>
     </div>
+    <div class="sb-nav-item{app.view === 'games' ? ' on' : ''}" onclick={() => app.setView("games")} role="button" tabindex="0" onkeydown={(e) => e.key === "Enter" && app.setView("games")}>
+        <Icon name="grid" size={14} /> Study games <span class="nav-k">play</span>
+    </div>
 
     <!-- Subjects section header -->
     <div class="sb-section-l">
