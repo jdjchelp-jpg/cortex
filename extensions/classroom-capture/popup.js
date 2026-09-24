@@ -35,7 +35,9 @@ async function waitForDownload(id) {
   throw new Error("download timed out");
 }
 async function importIntoCortex(path, item, bundle) {
-  const response = await fetch("http://127.0.0.1:47821/api/classroom/import", { method: "POST", headers: { "Content-Type": "application/json", "X-Cortex-Bridge": "cortex-local" }, body: JSON.stringify({ subject: bundle.subject, topic: bundle.topic, path, name: item.title, kind: item.kind }) });
+  // `file` is only the extension's display category; Cortex detects the real
+  // source kind from the downloaded filename (pdf/docx/xlsx/pptx/etc.).
+  const response = await fetch("http://127.0.0.1:47821/api/classroom/import", { method: "POST", headers: { "Content-Type": "application/json", "X-Cortex-Bridge": "cortex-local" }, body: JSON.stringify({ subject: bundle.subject, topic: bundle.topic, path, name: item.title }) });
   if (!response.ok) throw new Error((await response.text()) || "Cortex import failed");
 }
 const fallback = { Biology: ["Cell biology / Membranes", "Genetics"], Mathematics: ["Algebra", "Geometry"] };
