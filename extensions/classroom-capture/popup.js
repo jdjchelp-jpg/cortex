@@ -45,7 +45,7 @@ $("capture").onclick = async () => {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const result = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => {
-      const items = [...document.querySelectorAll('a[href]')].map(a => ({ title: (a.textContent || a.getAttribute('aria-label') || a.href).trim().replace(/\s+/g, ' '), url: a.href, kind: /drive|docs|slides|sheets|pdf|download/i.test(a.href) ? 'file' : 'link' })).filter(x => x.url.startsWith('http') && !x.url.includes('accounts.google.com'));
+      const items = [...document.querySelectorAll('a[href]')].map(a => ({ title: (a.textContent || a.getAttribute('aria-label') || a.href).trim().replace(/\s+/g, ' '), url: a.href, kind: /youtube\.com|youtu\.be/i.test(a.href) ? 'youtube' : 'file' })).filter(x => x.url.startsWith('http') && !x.url.includes('accounts.google.com') && /youtube\.com|youtu\.be|docs\.google\.com|drive\.google\.com|\.(pdf|doc|docx|xls|xlsx|ppt|pptx)(?:[?#]|$)/i.test(x.url));
       return { pageTitle: document.title, pageUrl: location.href, items: [...new Map(items.map(x => [x.url, x])).values()] };
     }});
     const data = result[0].result;
