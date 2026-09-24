@@ -72,7 +72,7 @@ pub fn parse(kind: &str, input: &AddSourceInput) -> Result<(String, Option<Strin
                 .ok_or_else(|| Error::Other("pdf source needs a file path".into()))?;
             pdf_to_text(p)
         }
-        "docx" | "pptx" => {
+        "docx" | "pptx" | "xlsx" => {
             let p = input
                 .path
                 .as_deref()
