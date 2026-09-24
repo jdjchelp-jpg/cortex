@@ -50,11 +50,16 @@ $("capture").onclick = async () => {
     }});
     const data = result[0].result;
     const bundle = { format: "cortex-classroom-capture", version: 1, capturedAt: new Date().toISOString(), subject: $("subject").value.trim(), topic: $("topic").value.trim(), subtopic: $("subtopic").value.trim(), ...data };
+    const files = bundle.items.filter(item => item.kind === "file");
+    for (const item of files) {
+      const safe = (item.title || "classroom-file").replace(/[^a-z0-9._-]+/gi, "-").slice(0, 90);
+      await chrome.downloads.download({ url: item.url, filename: `Cortex Classroom/${bundle.subject || "Subject"}/${bundle.topic || "Topic"}/${safe}`, saveAs: false });
+    }
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     await chrome.downloads.download({ url, filename: `cortex-${(bundle.subject || "classroom").replace(/[^a-z0-9]+/gi, "-")}.cortex.json`, saveAs: true });
     $("status").className = "status ok";
-    $("status").textContent = `Captured ${bundle.items.length} links/files. Your Cortex bundle is ready.`;
+    $("status").textContent = `Downloaded ${files.length} files and saved ${bundle.items.length - files.length} YouTube links. JSON backup is ready.`;
   } catch (e) { $("status").className = "status err"; $("status").textContent = `Capture failed: ${e.message}`; }
   finally { button.disabled = false; }
 };
