@@ -21,10 +21,14 @@ syncButton.onclick = async () => {
   finally { syncButton.disabled = false; }
 };
 function renderChoices() {
+  const previousSubject = $("subject").value;
+  const previousTopic = $("topic").value;
   const subjects = Object.keys(structure);
   $("subject").innerHTML = subjects.map(s => `<option>${s}</option>`).join("") || '<option value="">Add a subject</option>';
+  if (subjects.includes(previousSubject)) $("subject").value = previousSubject;
   const topics = structure[$("subject").value] || [];
   $("topic").innerHTML = topics.map(t => `<option>${t}</option>`).join("") || '<option value="">Add a topic</option>';
+  if (topics.includes(previousTopic)) $("topic").value = previousTopic;
   const full = $("topic").value;
   const parts = full.split("/").map(x => x.trim());
   $("subtopic").innerHTML = (parts[1] ? `<option>${parts[1]}</option>` : '<option value="">No subtopic</option>');
