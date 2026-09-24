@@ -1,4 +1,18 @@
 const $ = (id) => document.getElementById(id);
+function directDownloadUrl(raw) {
+  try {
+    const u = new URL(raw);
+    let m = u.pathname.match(/\/document\/d\/([^/]+)/);
+    if (m) return `https://docs.google.com/document/d/${m[1]}/export?format=docx`;
+    m = u.pathname.match(/\/spreadsheets\/d\/([^/]+)/);
+    if (m) return `https://docs.google.com/spreadsheets/d/${m[1]}/export?format=xlsx`;
+    m = u.pathname.match(/\/presentation\/d\/([^/]+)/);
+    if (m) return `https://docs.google.com/presentation/d/${m[1]}/export/pptx`;
+    m = u.pathname.match(/\/file\/d\/([^/]+)/) || u.search.match(/[?&]id=([^&]+)/);
+    if (m && /drive\.google\.com$/i.test(u.hostname)) return `https://drive.usercontent.google.com/download?id=${m[1]}&export=download&confirm=t`;
+  } catch { /* keep original URL */ }
+  return raw;
+}
 const fallback = { Biology: ["Cell biology / Membranes", "Genetics"], Mathematics: ["Algebra", "Geometry"] };
 let structure = fallback;
 const syncButton = document.createElement("button");
@@ -53,7 +67,7 @@ $("capture").onclick = async () => {
     const files = bundle.items.filter(item => item.kind === "file");
     for (const item of files) {
       const safe = (item.title || "classroom-file").replace(/[^a-z0-9._-]+/gi, "-").slice(0, 90);
-      await chrome.downloads.download({ url: item.url, filename: `Cortex Classroom/${bundle.subject || "Subject"}/${bundle.topic || "Topic"}/${safe}`, saveAs: false });
+      await chrome.downloads.download({ url: directDownloadUrl(item.url), filename: `Cortex Classroom/${bundle.subject || "Subject"}/${bundle.topic || "Topic"}/${safe}`, saveAs: false });
     }
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
