@@ -98,6 +98,7 @@ $("capture").onclick = async () => {
       const safe = cleanFilename(item.title, item.url);
       const downloadId = await chrome.downloads.download({ url: directDownloadUrl(item.url), filename: `Cortex Classroom/${bundle.subject || "Subject"}/${bundle.topic || "Topic"}/${safe}`, saveAs: false });
       const path = await waitForDownload(downloadId);
+      item.localPath = path;
       await importIntoCortex(path, item, bundle);
     }
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });

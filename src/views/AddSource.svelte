@@ -136,6 +136,32 @@
     }
   }
 
+  async function importClassroomBundle(file: File) {
+    if (!guardSubject()) return;
+    try {
+      const bundle = JSON.parse(await file.text()) as { subject?: string; topic?: string; items?: { title: string; url: string; kind?: string; localPath?: string }[] };
+      if (bundle.format !== "cortex-classroom-capture" || !Array.isArray(bundle.items)) throw new Error("Not a Cortex Classroom bundle");
+      const target = app.subjects.find((s) => s.name === bundle.subject);
+      if (target) {
+        selectedSubjectId = target.id;
+        const topic = target.topics.find((t) => t.name === bundle.topic);
+        selectedTopic = topic?.id ?? "";
+      }
+      let queued = 0;
+      for (const item of bundle.items) {
+        if (item.localPath) {
+          queueIngest({ subject_id: selectedSubjectId, topic_id: topicId, path: item.localPath, name: item.title, tags: [] }, item.title);
+          queued++;
+        } else if (item.kind === "youtube" || /youtube\.com|youtu\.be/i.test(item.url)) {
+          queueIngest({ subject_id: selectedSubjectId, topic_id: topicId, url: item.url, name: item.title, kind: "yt", tags: [] }, item.title);
+          queued++;
+        }
+      }
+      app.pushToast({ kind: queued ? "success" : "warning", title: queued ? `Queued ${queued} Classroom items` : "No importable items", body: "Files and YouTube links were assigned to the selected topic." });
+      if (queued) { app.openSubject(selectedSubjectId); app.setTab("sources"); }
+    } catch (e) { app.pushToast({ kind: "error", title: "Classroom bundle import failed", body: String(e) }); }
+  }
+
   /** Pick a folder and queue every supported file inside it (recursively). */
   async function beginFolder() {
     if (!guardSubject()) return;
@@ -386,6 +412,10 @@
           <button class="btn btn--ghost btn--sm" style="margin-top:8px" onclick={beginFolder}>
             <Icon name="grid" size={12} /> Add a folder — imports every supported file inside
           </button>
+          <label class="btn btn--ghost btn--sm" style="margin-top:8px;cursor:pointer">
+            <Icon name="upload" size={12} /> Import Classroom bundle
+            <input hidden type="file" accept=".json,application/json" onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) void importClassroomBundle(f); e.currentTarget.value = ""; }} />
+          </label>
         {:else if method === "photo"}
           <span class="onb-label mono">SNAP PHOTO</span>
           <!-- svelte-ignore a11y_click_events_have_key_events -->
