@@ -25,6 +25,19 @@ function cleanFilename(title, rawUrl) {
   if (ext && !name.toLowerCase().endsWith(`.${ext.toLowerCase()}`)) name += `.${ext}`;
   return name.replace(/[^a-z0-9._-]+/gi, "-").replace(/-+/g, "-").slice(0, 100) || `classroom-file${ext ? `.${ext}` : ""}`;
 }
+async function waitForDownload(id) {
+  for (let i = 0; i < 120; i++) {
+    const [item] = await chrome.downloads.search({ id });
+    if (item?.state === "complete") return item.filename;
+    if (item?.state === "interrupted") throw new Error("download interrupted");
+    await new Promise(r => setTimeout(r, 500));
+  }
+  throw new Error("download timed out");
+}
+async function importIntoCortex(path, item, bundle) {
+  const response = await fetch("http://127.0.0.1:47821/api/classroom/import", { method: "POST", headers: { "Content-Type": "application/json", "X-Cortex-Bridge": "cortex-local" }, body: JSON.stringify({ subject: bundle.subject, topic: bundle.topic, path, name: item.title, kind: item.kind }) });
+  if (!response.ok) throw new Error((await response.text()) || "Cortex import failed");
+}
 const fallback = { Biology: ["Cell biology / Membranes", "Genetics"], Mathematics: ["Algebra", "Geometry"] };
 let structure = fallback;
 const syncButton = document.createElement("button");
@@ -79,7 +92,9 @@ $("capture").onclick = async () => {
     const files = bundle.items.filter(item => item.kind === "file");
     for (const item of files) {
       const safe = cleanFilename(item.title, item.url);
-      await chrome.downloads.download({ url: directDownloadUrl(item.url), filename: `Cortex Classroom/${bundle.subject || "Subject"}/${bundle.topic || "Topic"}/${safe}`, saveAs: false });
+      const downloadId = await chrome.downloads.download({ url: directDownloadUrl(item.url), filename: `Cortex Classroom/${bundle.subject || "Subject"}/${bundle.topic || "Topic"}/${safe}`, saveAs: false });
+      const path = await waitForDownload(downloadId);
+      await importIntoCortex(path, item, bundle);
     }
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
