@@ -4,7 +4,7 @@ use std::io::{Read, Write};
 use std::net::TcpListener;
 use tauri::Manager;
 
-pub fn start<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+pub fn start(app: &tauri::AppHandle) {
     let handle = app.clone();
     std::thread::spawn(move || {
         let Ok(listener) = TcpListener::bind("127.0.0.1:47821") else { return; };
