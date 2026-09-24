@@ -13,6 +13,18 @@ function directDownloadUrl(raw) {
   } catch { /* keep original URL */ }
   return raw;
 }
+function cleanFilename(title, rawUrl) {
+  let name = (title || "classroom-file").replace(/\s+/g, " ").trim();
+  name = name.replace(/(Microsoft[- ]Word|Microsoft[- ]Excel|Microsoft[- ]PowerPoint|Brave HTML Document|PDF File|PDF|DOCX?|XLSX?|PPTX?)$/i, "").trim();
+  let ext = "";
+  try {
+    const u = new URL(directDownloadUrl(rawUrl));
+    ext = u.searchParams.get("format") || (u.pathname.match(/\.(pdf|docx?|xlsx?|pptx?)(?:$|\?)/i)?.[1] || "");
+  } catch { /* use the title extension */ }
+  if (!ext) ext = name.match(/\.(pdf|docx?|xlsx?|pptx?)$/i)?.[1] || "";
+  if (ext && !name.toLowerCase().endsWith(`.${ext.toLowerCase()}`)) name += `.${ext}`;
+  return name.replace(/[^a-z0-9._-]+/gi, "-").replace(/-+/g, "-").slice(0, 100) || `classroom-file${ext ? `.${ext}` : ""}`;
+}
 const fallback = { Biology: ["Cell biology / Membranes", "Genetics"], Mathematics: ["Algebra", "Geometry"] };
 let structure = fallback;
 const syncButton = document.createElement("button");
@@ -66,7 +78,7 @@ $("capture").onclick = async () => {
     const bundle = { format: "cortex-classroom-capture", version: 1, capturedAt: new Date().toISOString(), subject: $("subject").value.trim(), topic: $("topic").value.trim(), subtopic: $("subtopic").value.trim(), ...data };
     const files = bundle.items.filter(item => item.kind === "file");
     for (const item of files) {
-      const safe = (item.title || "classroom-file").replace(/[^a-z0-9._-]+/gi, "-").slice(0, 90);
+      const safe = cleanFilename(item.title, item.url);
       await chrome.downloads.download({ url: directDownloadUrl(item.url), filename: `Cortex Classroom/${bundle.subject || "Subject"}/${bundle.topic || "Topic"}/${safe}`, saveAs: false });
     }
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
