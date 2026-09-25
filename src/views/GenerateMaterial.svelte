@@ -201,12 +201,12 @@
       <div class="gm2-block">
         {#if type === "audio"}
           <div class="field">
-            <label class="onb-label mono">AUDIO FORMAT</label>
+            <div class="onb-label mono">AUDIO FORMAT</div>
             <div class="seg">
               <button class={audioMode === "podcast" ? "seg-opt on" : "seg-opt"} onclick={() => (audioMode = "podcast")}>Study podcast</button>
               <button class={audioMode === "audiobook" ? "seg-opt on" : "seg-opt"} onclick={() => (audioMode = "audiobook")}>Dramatic audiobook</button>
             </div>
-            <label class="onb-label mono">LENGTH</label>
+            <div class="onb-label mono">LENGTH</div>
             <div class="seg">
               {#each [5, 15, 30] as mins}
                 <button class={audioLength === mins ? "seg-opt on" : "seg-opt"} onclick={() => (audioLength = mins as 5 | 15 | 30)}>{mins} min</button>

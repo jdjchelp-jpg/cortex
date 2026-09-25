@@ -139,7 +139,7 @@
   async function importClassroomBundle(file: File) {
     if (!guardSubject()) return;
     try {
-      const bundle = JSON.parse(await file.text()) as { subject?: string; topic?: string; items?: { title: string; url: string; kind?: string; localPath?: string }[] };
+      const bundle = JSON.parse(await file.text()) as { format?: string; subject?: string; topic?: string; items?: { title: string; url: string; kind?: string; localPath?: string }[] };
       if (bundle.format !== "cortex-classroom-capture" || !Array.isArray(bundle.items)) throw new Error("Not a Cortex Classroom bundle");
       const target = app.subjects.find((s) => s.name === bundle.subject);
       if (target) {
