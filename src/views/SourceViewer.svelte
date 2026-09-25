@@ -8,6 +8,7 @@
   import ChatPanel from "../components/ChatPanel.svelte";
   import { isMobile } from "../lib/platform";
   import { tick } from "svelte";
+  import { openPath } from "@tauri-apps/plugin-opener";
 
   // ---- state ----
   let chunks = $state<ChunkInfo[]>([]);
@@ -80,6 +81,12 @@
   );
   // Anything with a dedicated preview skips the chunk-list fallback.
   const hasPreview = $derived(isPdfDoc || isImage || isAudio || isText);
+  async function openWithDefaultApp() {
+    const path = app.activeSource?.stored_path;
+    if (!path) return;
+    try { await openPath(path); }
+    catch (e) { app.pushToast({ kind: "error", title: "Could not open file", body: String(e) }); }
+  }
 
   // ---- mobile PDF rendering ----
   // iOS WKWebView only renders the FIRST page of an <iframe> PDF and won't scroll,
@@ -292,6 +299,11 @@
         </div>
       {:else if isPdfDoc && assetUrl}
         <!-- PDF / rendered slide preview (also covers pptx & docx via rendered PDF) -->
+        <div class="sv-preview-tools">
+          <button class="btn btn--sm btn--ghost" onclick={openWithDefaultApp}>
+            <Icon name="external" size={12} /> Open with default PDF app
+          </button>
+        </div>
         {#if isMobile}
           <!-- All pages via PDF.js (WKWebView's iframe shows only page 1) -->
           <div class="sv-pdf-pages" bind:this={pdfBox}></div>
