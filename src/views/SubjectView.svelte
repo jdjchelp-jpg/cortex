@@ -140,6 +140,27 @@
     await app.createTopic(`${parent} / ${child}`);
     loadSources();
   }
+  async function copyAllSourceNotes() {
+    if (!subj || srcList.length === 0) return;
+    try {
+      const full = await Promise.all(srcList.map((s) => api.getSource(s.id)));
+      const byId = new Map(full.map((s) => [s.id, s]));
+      const topicOrder = new Map((subj.topics ?? []).map((t, i) => [t.id, i]));
+      const ordered = [...srcList].sort((a, b) => (topicOrder.get(a.topic_id ?? "") ?? 9999) - (topicOrder.get(b.topic_id ?? "") ?? 9999));
+      const blocks: string[] = [];
+      let lastTopic = "";
+      for (const source of ordered) {
+        const topic = subj.topics.find((t) => t.id === source.topic_id)?.name ?? "Other sources";
+        const notes = byId.get(source.id)?.content?.trim() ?? "";
+        if (!notes) continue;
+        if (topic !== lastTopic) { blocks.push(topic); lastTopic = topic; }
+        blocks.push(notes);
+      }
+      if (!blocks.length) { app.pushToast({ kind: "warning", title: "No extracted notes to copy" }); return; }
+      await navigator.clipboard.writeText(blocks.join("\n\n"));
+      app.pushToast({ kind: "success", title: "All source notes copied", body: "Ordered by topic and subtopic." });
+    } catch (e) { app.pushToast({ kind: "error", title: "Copy all failed", body: String(e) }); }
+  }
   const groups = $derived.by(() => {
     const m = new Map<string, Source[]>();
     for (const s of srcList) {
@@ -317,6 +338,9 @@
               <span class="label">{srcList.length} {srcList.length === 1 ? "source" : "sources"} · {groups.length} {groups.length === 1 ? "group" : "groups"}</span>
               <div class="grow"></div>
               {#if srcList.length > 0}
+                <button class="btn btn--sm btn--ghost" onclick={copyAllSourceNotes} title="Copy every source note in topic order">
+                  <Icon name="copy" size={12} /> Copy all notes
+                </button>
                 <button class="btn btn--sm btn--ghost" onclick={selectAll} title="Select all sources">
                   <Icon name="check" size={12} /> {allSelected ? "Deselect all" : "Select all"}
                 </button>

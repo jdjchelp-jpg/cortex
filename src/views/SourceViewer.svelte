@@ -81,6 +81,16 @@
   );
   // Anything with a dedicated preview skips the chunk-list fallback.
   const hasPreview = $derived(isPdfDoc || isImage || isAudio || isText);
+  async function copySourceNotes() {
+    const source = app.activeSource;
+    if (!source) return;
+    const notes = source.content?.trim() || chunks.map((c) => c.text).join("\n\n").trim();
+    if (!notes) { app.pushToast({ kind: "warning", title: "No extracted notes to copy" }); return; }
+    try {
+      await navigator.clipboard.writeText(notes);
+      app.pushToast({ kind: "success", title: "Source notes copied" });
+    } catch (e) { app.pushToast({ kind: "error", title: "Copy failed", body: String(e) }); }
+  }
   async function openWithDefaultApp() {
     const path = app.activeSource?.stored_path;
     if (!path) return;
@@ -269,6 +279,9 @@
         <Icon name="search" size={13} />
       </button>
       {#if src}
+        <button class="btn btn--sm btn--ghost" onclick={copySourceNotes} title="Copy extracted notes from this source">
+          <Icon name="copy" size={12} /> Copy notes
+        </button>
         <button
           class="btn btn--icon btn--sm btn--ghost"
           onclick={editSource}
