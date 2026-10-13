@@ -29,7 +29,7 @@ jobs:
   prepare:
     name: Ensure a single release exists
     if: github.ref_type == 'tag' || inputs.tag != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Reconcile to exactly one release for the tag
         # tauri-action attaches to the FIRST release whose tag_name matches —
@@ -96,7 +96,7 @@ jobs:
     # Signing secrets live in the "Production" environment.
     environment: Production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # ── macOS code signing + notarization ──
       # Imports the cert and exports the signing identity. Best-effort: any
@@ -225,9 +225,9 @@ jobs:
     needs: release
     # Tag pushes AND manual dispatches that name a real tag both publish.
     if: github.ref_type == 'tag' || inputs.tag != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Publish release & compute checksums
         id: meta
