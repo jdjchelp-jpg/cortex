@@ -18,10 +18,15 @@
     pdf: "PDF", pptx: "PPTX", docx: "DOCX", web: "WEB", yt: "YT", audio: "AUD", image: "IMG",
   };
 
-  // Count-based formats and their clamps; other formats have no "how many".
-  const COUNT_LIMITS: Record<string, { min: number; max: number; def: number }> = {
-    flashcards: { min: 4, max: 40, def: 14 },
-    quiz: { min: 3, max: 30, def: 10 },
+  // Count-based formats and their clamps. flashcards/quiz always send an exact
+  // number; slideshow & audio default to `null` ("Default") which lets the model
+  // pick its natural range (8-12 slides / 12-20 segments), and `allowAuto` shows a
+  // "Default" chip so the user can return to that. Backend mirrors these ranges.
+  const COUNT_LIMITS: Record<string, { min: number; max: number; def: number; label: string; presets: number[]; allowAuto?: boolean }> = {
+    flashcards: { min: 4, max: 100, def: 14, label: "CARDS", presets: [14, 28, 50, 100] },
+    quiz: { min: 3, max: 50, def: 10, label: "QUESTIONS", presets: [10, 20, 35, 50] },
+    slideshow: { min: 8, max: 100, def: 12, label: "SLIDES", presets: [30, 60, 90, 100], allowAuto: true },
+    audio: { min: 4, max: 50, def: 20, label: "SEGMENTS", presets: [20, 30, 40, 50], allowAuto: true },
   };
 
   // ── Derived from real active subject ─────────────────────────
@@ -38,15 +43,23 @@
   let title = $state("");
   let customPrompt = $state("");
   let audioLength = $state<5 | 15 | 30>(15);
-  let audioMode = $state<"podcast" | "audiobook">(app.materialLaunchType === "audio" ? "audiobook" : "podcast");
+  let audioMode = $state<"podcast" | "audiobook" | "dramatic">(app.materialLaunchType === "audio" ? "audiobook" : "podcast");
   // Per-type item count (flashcards / quiz). Seeded from the defaults.
   let cardCount = $state(COUNT_LIMITS.flashcards.def);
   let quizCount = $state(COUNT_LIMITS.quiz.def);
+  let slideCount = $state<number | null>(null);
+  let audioCount = $state<number | null>(null);
 
   // ── Derived ───────────────────────────────────────────────────
   const selSources = $derived(allSources.filter(s => sel.includes(s.id)));
   const countLimit = $derived(COUNT_LIMITS[type] ?? null);
-  const countValue = $derived(type === "flashcards" ? cardCount : type === "quiz" ? quizCount : null);
+  const countValue = $derived(
+    type === "flashcards" ? cardCount
+    : type === "quiz" ? quizCount
+    : type === "slideshow" ? slideCount
+    : type === "audio" ? audioCount
+    : null
+  );
 
   const counts = $derived.by(() => {
     const c: Record<string, number> = {};
@@ -98,6 +111,14 @@
     const v = Math.max(countLimit.min, Math.min(countLimit.max, Math.round(n) || countLimit.def));
     if (type === "flashcards") cardCount = v;
     else if (type === "quiz") quizCount = v;
+    else if (type === "slideshow") slideCount = v;
+    else if (type === "audio") audioCount = v;
+  }
+
+  // Reset slideshow/audio back to "Default" (null) → backend uses its natural range.
+  function setDefaultCount() {
+    if (type === "slideshow") slideCount = null;
+    else if (type === "audio") audioCount = null;
   }
 
   function generate() {
@@ -114,7 +135,7 @@
     const sourceIds = [...sel];
     const count = countValue ?? undefined;
     const generationPrompt = type === "audio"
-      ? `${customPrompt.trim()}\nAudio format: ${audioMode === "audiobook" ? "dramatic audiobook storytelling with scenes, characters, and narrative pacing" : "two-host study podcast"}. Target length: ${audioLength} minutes.`.trim()
+      ? `${customPrompt.trim()}\nAudio format: ${audioMode === "dramatic" ? "dramatic audiobook storytelling with scenes, characters, and narrative pacing" : audioMode === "audiobook" ? "novel-like educational audiobook narrated by one voice" : "two-host study podcast"}. Target length: ${audioLength} minutes.`.trim()
       : customPrompt.trim();
 
     jobs.start({
@@ -180,17 +201,22 @@
         </div>
       </div>
 
-      {#if countLimit && countValue !== null}
+      {#if countLimit}
         <div class="gm2-block">
-          <div class="onb-label mono">{type === "quiz" ? "QUESTIONS" : "CARDS"}</div>
+          <div class="onb-label mono">{countLimit.label}</div>
           <div class="gm2-count">
-            <div class="gm2-step">
-              <button class="btn btn--icon btn--sm" onclick={() => setCount(countValue - 1)} aria-label="fewer" disabled={countValue <= countLimit.min}>−</button>
-              <span class="mono gm2-step-v">{countValue}</span>
-              <button class="btn btn--icon btn--sm" onclick={() => setCount(countValue + 1)} aria-label="more" disabled={countValue >= countLimit.max}>+</button>
-            </div>
+            {#if countValue !== null}
+              <div class="gm2-step">
+                <button class="btn btn--icon btn--sm" onclick={() => setCount(countValue - 1)} aria-label="fewer" disabled={countValue <= countLimit.min}>−</button>
+                <span class="mono gm2-step-v">{countValue}</span>
+                <button class="btn btn--icon btn--sm" onclick={() => setCount(countValue + 1)} aria-label="more" disabled={countValue >= countLimit.max}>+</button>
+              </div>
+            {/if}
             <div class="seg gm2-count-presets">
-              {#each [Math.round(countLimit.def / 2), countLimit.def, Math.min(countLimit.max, countLimit.def * 2)] as p}
+              {#if countLimit.allowAuto}
+                <button class="seg-opt{countValue === null ? ' on' : ''}" onclick={setDefaultCount}>Default</button>
+              {/if}
+              {#each countLimit.presets as p}
                 <button class="seg-opt{countValue === p ? ' on' : ''}" onclick={() => setCount(p)}>{p}</button>
               {/each}
             </div>
@@ -204,7 +230,8 @@
             <div class="onb-label mono">AUDIO FORMAT</div>
             <div class="seg">
               <button class={audioMode === "podcast" ? "seg-opt on" : "seg-opt"} onclick={() => (audioMode = "podcast")}>Study podcast</button>
-              <button class={audioMode === "audiobook" ? "seg-opt on" : "seg-opt"} onclick={() => (audioMode = "audiobook")}>Dramatic audiobook</button>
+              <button class={audioMode === "audiobook" ? "seg-opt on" : "seg-opt"} onclick={() => (audioMode = "audiobook")}>Audiobook</button>
+              <button class={audioMode === "dramatic" ? "seg-opt on" : "seg-opt"} onclick={() => (audioMode = "dramatic")}>Dramatic Audiobook</button>
             </div>
             <div class="onb-label mono">LENGTH</div>
             <div class="seg">

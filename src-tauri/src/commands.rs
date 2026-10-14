@@ -2768,11 +2768,39 @@ pub async fn generate_material(
     // How many items to generate, when the kind is count-based. The user can set
     // this in GenerateMaterial; clamp to a sane range so a bad value can't ask the
     // model for 0 or 500 cards.
-    let quiz_n = count.unwrap_or(9).clamp(3, 30);
-    let card_n = count.unwrap_or(14).clamp(4, 40);
+    let quiz_n = count.unwrap_or(9).clamp(3, 50);
+    let card_n = count.unwrap_or(14).clamp(4, 100);
+    // Slides & audio also accept an explicit set count: slides up to 100, podcast
+    // segments up to 50. `None` keeps the kind's natural default range (8-12 slides,
+    // 12-20 segments); `Some(n)` asks the model for EXACTLY n.
+    let slide_n = count.map(|n| n.clamp(8, 100));
+    let audio_n = count.map(|n| n.clamp(4, 50));
+    // Audio segment-count steering (podcast vs audiobook vs dramatic phrasing).
+    let (podcast_segs, audiobook_segs, dramatic_segs) = match audio_n {
+        Some(n) => (
+            format!("EXACTLY {n} lively, accurate segments"),
+            format!(" Structure the narration as EXACTLY {n} segments."),
+            format!(" Structure the story as EXACTLY {n} segments."),
+        ),
+        None => (
+            "12-20 lively, accurate segments".to_string(),
+            String::new(),
+            String::new(),
+        ),
+    };
+    // Slideshow: an explicit set count overrides the default 8-12 range.
+    let slide_phrase = match slide_n {
+        Some(n) => format!("EXACTLY {n} slides."),
+        None => "8-12 slides.".to_string(),
+    };
 
     // Per-kind prompt + payload shape.
-    let audiobook = custom_prompt.as_deref().is_some_and(|p| p.to_ascii_lowercase().contains("audiobook"));
+    // Audio sub-format is signalled by the frontend via the custom-prompt text
+    // ("Audio format: …"). "Dramatic audiobook" also contains "audiobook", so it
+    // must be tested first.
+    let custom_lc = custom_prompt.as_deref().map(|p| p.to_ascii_lowercase()).unwrap_or_default();
+    let is_dramatic = custom_lc.contains("dramatic audiobook");
+    let is_audiobook = custom_lc.contains("audiobook");
     let (system, default_title) = match kind.as_str() {
         "quiz" => (
             format!(
@@ -2783,22 +2811,36 @@ pub async fn generate_material(
             format!("{topic_name} quiz"),
         ),
         "audio" => (
-            if audiobook {
+            if is_dramatic {
+                // Dramatic Audiobook: a serialized literary novel — chapter headings,
+                // rich scene-setting, sensory detail, named characters with motives, and
+                // dialogue woven into the prose. One narrator voices everyone; the drama
+                // and pacing teach the material as it unfolds.
+                format!(
+                    "You write a DRAMATIC, serialized-novel audiobook narrated by one person, {host_a}. \
+                     The narrator voices every character (dialogue woven into the prose), but every \
+                     segment MUST use speaker \"{host_a}\" so one voice is used. Output ONLY JSON: \
+                     {{\"segments\":[{{\"speaker\":\"{host_a}\",\"text\":\"...\"}}]}}. Write it like a \
+                     literary novel: open with a dramatic CHAPTER heading, then rich scene-setting, \
+                     sensory detail, named characters with clear motivations, and dialogue embedded in \
+                     the narration. Build narrative tension and pacing across segments — and still \
+                     teach every topic and subtopic from the material, naming each as it surfaces in \
+                     the story.{dramatic_segs} No prose outside JSON."
+                )
+            } else if is_audiobook {
                 format!(
                     "You write a novel-like educational audiobook narrated by one person, {host_a}. \
                      The narrator may perform dialogue by other characters, but every segment MUST use \
                      speaker \"{host_a}\" so one voice is used. Output ONLY JSON: \
                      {{\"segments\":[{{\"speaker\":\"{host_a}\",\"text\":\"...\"}}]}}. Write a deep, \
                      vivid story with scenes, character dialogue, and narrative pacing while teaching \
-                     every topic and subtopic. Name each topic/subtopic when introducing its section. \
-                     No prose outside JSON."
+                     every topic and subtopic. Name each topic/subtopic when introducing its section.{audiobook_segs} No prose outside JSON."
                 )
             } else {
                 format!(
                     "You write a two-host study podcast script from study material. The two hosts are \
                      named {host_a} and {host_b}. Output ONLY JSON: \
-                     {{\"segments\":[{{\"speaker\":\"{host_a}\"|\"{host_b}\",\"text\":\"...\"}}]}}. 12-20 \
-                     lively, accurate segments that teach the material conversationally. No prose outside JSON."
+                     {{\"segments\":[{{\"speaker\":\"{host_a}\"|\"{host_b}\",\"text\":\"...\"}}]}}. {podcast_segs} that teach the material conversationally. No prose outside JSON."
                 )
             },
             format!("{topic_name} — audio overview"),
@@ -2830,8 +2872,11 @@ pub async fn generate_material(
             format!("{topic_name} — infographic"),
         ),
         "slideshow" => (
-            "You produce a slideshow outline from study material. Output ONLY JSON: \
-             {\"slides\":[{\"title\":\"...\",\"bullets\":[\"...\"],\"notes\":\"voiceover\"}]}. 8-12 slides. No prose outside JSON.".to_string(),
+            {
+                let base = "You produce a slideshow outline from study material. Output ONLY JSON: \
+                 {\"slides\":[{\"title\":\"...\",\"bullets\":[\"...\"],\"notes\":\"voiceover\"}]}. ";
+                format!("{base}{slide_phrase} No prose outside JSON.")
+            },
             format!("{topic_name} — slideshow"),
         ),
         "mindmap" => (
@@ -2880,8 +2925,9 @@ pub async fn generate_material(
         "quiz" => format!("{} questions", payload.as_array().map(|a| a.len()).unwrap_or(0)),
         "flashcards" => format!("{} cards", payload.as_array().map(|a| a.len()).unwrap_or(0)),
         "audio" => format!(
-            "{} segments · podcast-style",
-            payload["segments"].as_array().map(|a| a.len()).unwrap_or(0)
+            "{} segments · {}",
+            payload["segments"].as_array().map(|a| a.len()).unwrap_or(0),
+            if is_dramatic { "dramatic audiobook" } else if is_audiobook { "audiobook" } else { "podcast" }
         ),
         "slideshow" => format!(
             "{} slides",
