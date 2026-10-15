@@ -69,7 +69,24 @@ pub fn cleanup_stale(app: &AppHandle) {
 
 fn socket_path(dir: &Path) -> String {
     #[cfg(windows)]
-    { let _ = dir; return "127.0.0.1:28453".to_string(); }
+    {
+        // mpv on Windows exposes IPC over a Win32 NAMED PIPE — never a Unix
+        // socket and never a TCP port (see mpv's input/ipc-win.c, which prepends
+        // `\\.\pipe\` to the value). Passing a socket path or a `host:port` here
+        // is what produced "unsupported: URL audio streaming requires a Unix
+        // socket." A named pipe is opened through the file API (CreateFileW),
+        // which `std::fs::OpenOptions` already uses — so no extra dependency.
+        //
+        // Name it after this install's data dir: stable across sessions (so
+        // cleanup_stale can still reach an mpv orphaned by a crashed run) but
+        // namespaced rather than a guessable global pipe. The OS destroys the
+        // pipe automatically when the mpv process exits, so there's no file to
+        // clean up on Windows.
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        dir.hash(&mut h);
+        format!(r"\\.\pipe\cortex-mpv-{:016x}", h.finish())
+    }
     #[cfg(not(windows))]
     { dir.join("mpv.sock").display().to_string() }
 }
@@ -196,12 +213,23 @@ fn ipc(socket: &str, cmd: &Value) -> Result<()> {
     Ok(())
 }
 
+/// Send one JSON command line to mpv's IPC endpoint.
+///
+/// Windows: mpv listens on a Win32 named pipe (see `socket_path`). A named pipe
+/// is opened like a file through CreateFileW — exactly what `OpenOptions::open`
+/// does — so we connect by opening the pipe path and writing the command line.
+/// This is a SINGLE attempt, mirroring the Unix `UnixStream::connect`: callers
+/// that must wait for mpv to come up (`ensure_mpv`) poll in a loop, so a direct
+/// call when mpv isn't running fails fast (keeping startup/`cleanup_stale`
+/// instant) instead of blocking.
 #[cfg(windows)]
 fn ipc(socket: &str, cmd: &Value) -> Result<()> {
     use std::io::Write;
-    use std::net::TcpStream;
-    let mut stream = TcpStream::connect(socket)
-        .map_err(|e| Error::Other(format!("mpv not reachable: {e}")))?;
+    let mut stream = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(socket)
+        .map_err(|e| Error::Other(format!("mpv not reachable on {socket}: {e}")))?;
     let mut line = serde_json::to_vec(cmd)?;
     line.push(b'\n');
     stream.write_all(&line)?;
@@ -234,10 +262,11 @@ pub fn media_tools_status(app: AppHandle) -> Result<MediaTools> {
 #[tauri::command]
 pub fn youtube_play(app: AppHandle, url: String, volume: u8) -> Result<()> {
     let dir = data_dir(&app)?;
-    #[cfg(windows)]
-    {
-        return youtube_play_windows(&dir, &url, volume);
-    }
+    // One unified path on every OS: a single long-lived `mpv --idle` driven over
+    // its IPC endpoint (Unix socket on Linux/macOS, named pipe on Windows — see
+    // socket_path/ipc). Opening the URL is just a `loadfile` command over IPC; no
+    // Unix socket is required merely to play a URL. This keeps play/pause/resume/
+    // stop/volume working identically everywhere.
     let socket = socket_path(&dir);
     let ytdlp = ensure_ytdlp(&dir)?;
     ensure_mpv(&socket, &ytdlp, volume)?;
@@ -273,30 +302,6 @@ pub fn youtube_play(app: AppHandle, url: String, volume: u8) -> Result<()> {
         &socket,
         &json!({ "command": ["set_property", "volume", volume as i64] }),
     )?;
-    Ok(())
-}
-
-/// Windows mpv builds expose IPC through named pipes, not Unix sockets. Keep
-/// playback reliable by treating the mpv child as the transport on Windows;
-/// switching stations terminates the previous child and starts a fresh one.
-#[cfg(windows)]
-fn youtube_play_windows(dir: &Path, url: &str, volume: u8) -> Result<()> {
-    let ytdlp = ensure_ytdlp(dir)?;
-    let holder = mpv_holder();
-    let mut guard = holder.lock().unwrap();
-    if let Some(mut child) = guard.take() {
-        let _ = child.kill();
-        let _ = child.wait();
-    }
-    let mpv_bin = find_on_path("mpv").unwrap_or_else(|| PathBuf::from("mpv"));
-    let child = Command::new(&mpv_bin)
-        .args(["--no-video", "--no-terminal", "--really-quiet", "--cache=yes"])
-        .arg(format!("--volume={volume}"))
-        .arg(format!("--script-opts=ytdl_hook-ytdl_path={}", ytdlp.display()))
-        .arg(url)
-        .spawn()
-        .map_err(|e| Error::Other(format!("couldn't start mpv — install it and ensure it is on PATH: {e}")))?;
-    *guard = Some(child);
     Ok(())
 }
 
@@ -484,6 +489,48 @@ fn spawn_resolve_and_cache(dir: PathBuf, ytdlp: PathBuf, url: String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Regression for the original Windows failure: mpv on Windows exposes IPC
+    // over a Win32 named pipe, NOT a Unix socket and NOT a TCP port. The old
+    // code passed a `host:port` (and drove it with TcpStream), so every control
+    // silently failed and URL playback surfaced
+    // "unsupported: URL audio streaming requires a Unix socket. (mpv)".
+    // socket_path must therefore never return a socket path or a bare TCP
+    // endpoint on Windows.
+    #[cfg(windows)]
+    #[test]
+    fn windows_socket_path_is_a_named_pipe() {
+        let dir = std::path::Path::new("C:\\Users\\test\\AppData\\Roaming\\cortex");
+        let p = socket_path(dir);
+        assert!(
+            p.starts_with(r"\\.\pipe\"),
+            "Windows IPC endpoint must be a named pipe, got: {p}"
+        );
+        assert!(!p.ends_with(".sock"), "must not be a Unix socket path: {p}");
+        assert!(!p.contains(':'), "must not be a host:port TCP endpoint: {p}");
+    }
+
+    // The pipe name is derived from the data dir, so it's stable across calls
+    // (cleanup_stale must reach an orphaned mpv) but scoped per install rather
+    // than a guessable global name.
+    #[cfg(windows)]
+    #[test]
+    fn windows_socket_path_is_stable_and_scoped() {
+        let a = socket_path(std::path::Path::new("C:\\cortex-a"));
+        let b = socket_path(std::path::Path::new("C:\\cortex-a"));
+        let c = socket_path(std::path::Path::new("C:\\cortex-b"));
+        assert_eq!(a, b, "same data dir must yield the same pipe name");
+        assert_ne!(a, c, "different installs must not share a pipe name");
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn unix_socket_path_is_a_socket_file() {
+        let dir = std::path::Path::new("/home/test/.local/share/cortex");
+        let p = socket_path(dir);
+        assert!(p.ends_with("mpv.sock"), "Unix IPC endpoint must be a socket file, got: {p}");
+        assert!(!p.contains(r"\\.\pipe\"), "Unix must not use a named pipe: {p}");
+    }
 
     #[test]
     fn playlist_urls_are_never_cached() {
