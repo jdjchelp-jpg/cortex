@@ -2175,6 +2175,114 @@ pub async fn import_anki(
     .map_err(|e| Error::Other(format!("anki import task failed: {e}")))?
 }
 
+/// Import flashcards from pasted text or JSON (Anki JSON / Quizlet / Memrise /
+/// the plain-text variants) into a subject as ONE flashcard deck. A topic is
+/// required — nothing imported may land untopiced. Content is parsed by
+/// `flashparse::parse`, deduped against existing flashcard decks in this
+/// subject (by normalized front), and stored in the exact
+/// `[{ "q": front, "a": back }]` payload the Flashcards view renders. Returns
+/// the same summary shape as `import_anki`.
+#[tauri::command]
+pub async fn import_flashcards(
+    app: AppHandle,
+    subject_id: String,
+    topic_id: String,
+    title: String,
+    format: String,
+    text: String,
+) -> Result<AnkiImportResult> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<AnkiImportResult> {
+        let state = app.state::<AppState>();
+
+        let topic_id = topic_id.trim().to_string();
+        if topic_id.is_empty() {
+            return Err(Error::Other("pick a topic — imported flashcards must belong to one".into()));
+        }
+
+        // Parse off the DB lock; unknown/empty formats error out here.
+        let parsed = crate::flashparse::parse(&format, &text)?;
+        if parsed.is_empty() {
+            return Err(Error::Other(
+                "no flashcards parsed from that input — check the format and try again".into(),
+            ));
+        }
+
+        // Existing flashcard fronts in this subject, built once under one lock.
+        let mut existing_fronts: std::collections::HashSet<String> = std::collections::HashSet::new();
+        {
+            let c = state.db.lock().unwrap();
+            for m in repo::list_materials(&c, &subject_id)? {
+                if m.kind != "flashcards" {
+                    continue;
+                }
+                for card in m.payload.as_array().into_iter().flatten() {
+                    if let Some(q) = card["q"].as_str() {
+                        let q = q.trim();
+                        if !q.is_empty() {
+                            existing_fronts.insert(crate::anki::dedupe_key(q));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Dedupe (within-import + against the subject) and build the payload.
+        let mut cards: Vec<serde_json::Value> = Vec::new();
+        let mut skipped = 0usize;
+        for (front, back) in &parsed {
+            let front = front.trim();
+            let back = back.trim();
+            if front.is_empty() {
+                skipped += 1;
+                continue;
+            }
+            if !existing_fronts.insert(crate::anki::dedupe_key(front)) {
+                skipped += 1;
+                continue;
+            }
+            cards.push(serde_json::json!({ "q": front, "a": back }));
+        }
+        if cards.is_empty() {
+            return Err(Error::Other(
+                "every card already exists in this subject".into(),
+            ));
+        }
+
+        let title = {
+            let t = title.trim();
+            if t.is_empty() {
+                "Imported flashcards".to_string()
+            } else {
+                t.to_string()
+            }
+        };
+        let n = cards.len();
+        let meta = format!("{n} cards · imported ({format})");
+        let payload = serde_json::Value::Array(cards);
+        {
+            let c = state.db.lock().unwrap();
+            repo::save_material(
+                &c,
+                &subject_id,
+                Some(topic_id.as_str()),
+                "flashcards",
+                &title,
+                &meta,
+                &payload,
+            )?;
+        }
+
+        Ok(AnkiImportResult {
+            deck_count: 1,
+            card_count: n,
+            skipped,
+        })
+    })
+    .await
+    .map_err(|e| Error::Other(format!("flashcard import task failed: {e}")))?
+}
+
+
 /// MAP step: turn ONE source into an exhaustive, compact study digest so a bucket
 /// with many sources can be reduced into a single cheatsheet without overflowing
 /// the model window — and so every source is guaranteed to be represented.

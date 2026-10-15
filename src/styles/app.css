@@ -1034,6 +1034,12 @@ html[data-hints="off"] .compose-hint, html[data-hints="off"] .diff-keys, html[da
 .st-toggle .st-knob { position: absolute; top: 2px; left: 2px; width: 17px; height: 17px; border-radius: 50%; background: var(--fg-faint); transition: transform var(--dur), background var(--dur); }
 .st-toggle.on { background: color-mix(in oklab, var(--accent) 40%, var(--surface-3)); border-color: var(--accent-dim); }
 .st-toggle.on .st-knob { transform: translateX(17px); background: var(--accent); }
+/* A labelled switch: the fixed-width .st-toggle pill plus a text label beside it.
+   Wrapping the toggle in its own span (instead of stuffing the label inside the
+   40px pill) keeps the label from overflowing/overlapping its neighbours. */
+.a11y-opt { display: inline-flex; align-items: center; gap: 9px; background: none; border: none; padding: 0; cursor: pointer; color: var(--fg-muted); }
+.a11y-opt .mono { font-size: var(--t-xs); }
+.a11y-opt:hover { color: var(--fg-bright); }
 
 /* masked key */
 .masked { position: relative; }

@@ -13,6 +13,7 @@ mod db;
 mod embed;
 mod error;
 mod exam;
+mod flashparse;
 mod google;
 mod homelab;
 mod ingest;
@@ -350,6 +351,7 @@ pub fn run() {
             commands::export_database,
             commands::export_anki,
             commands::import_anki,
+            commands::import_flashcards,
             backup::backup_status,
             backup::backup_now,
             commands::optimize_db,

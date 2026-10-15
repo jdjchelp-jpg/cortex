@@ -335,6 +335,16 @@ export interface AnkiImportResult {
  *  per deck). HTML-stripped, deduped vs existing decks in the subject. */
 export const importAnki = (subjectId: string, path: string, topicId?: string) =>
   invoke<AnkiImportResult>("import_anki", { subjectId, topicId, path });
+/** Import flashcards from pasted text or JSON (one deck) into a subject/topic.
+ *  `format` selects the parser: anki_json | quizlet | memrise | newline | tab |
+ *  colon | qa. HTML-stripped by the player, deduped vs existing decks. */
+export const importFlashcards = (
+  subjectId: string,
+  topicId: string,
+  title: string,
+  format: string,
+  text: string
+) => invoke<AnkiImportResult>("import_flashcards", { subjectId, topicId, title, format, text });
 // ---- encrypted homelab backups (age + rclone) ----
 export interface BackupStatus {
   age_found: boolean;

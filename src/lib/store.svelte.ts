@@ -715,7 +715,7 @@ class AppStore {
     try {
       // Start empty on a fresh install — no demo seeding. Every view renders a
       // proper empty state when there are no subjects/sources.
-      const subs = await api.listSubjects();
+      const subs = await this.#loadSubjects();
       this.subjects = subs;
       if (subs.length && !this.activeSubjectId) this.activeSubjectId = subs[0].id;
     } catch (e) {
@@ -1028,8 +1028,54 @@ class AppStore {
     this.#appReconcile(); // start now if eligible
   }
 
+  // ---- local-account subject isolation ----
+  // Local profiles (Settings → Local account) partition the shared vault's
+  // subjects. The active profile id + each profile's subject membership live in
+  // localStorage (written by Settings). The store reads them so EVERY subject
+  // load — refresh, CRUD, sync — stays scoped to the active profile instead of
+  // leaking subjects across accounts. A subject not yet owned by any profile is
+  // claimed for the ACTIVE profile (never silently absorbed into the first
+  // "main" profile), which is what keeps a subject created in profile B in B.
+  #accountMemberships(): Record<string, string[]> {
+    try { return JSON.parse(localStorage.getItem("cortex-account-subjects") ?? "{}"); } catch { return {}; }
+  }
+  #activeAccountId(): string {
+    try { return localStorage.getItem("cortex-active-account") ?? ""; } catch { return ""; }
+  }
+  #scopeToAccount(all: Subject[]): Subject[] {
+    const id = this.#activeAccountId();
+    if (!id) return all; // no active profile (single-user / pre-account) → full list
+    const memberships = this.#accountMemberships();
+    // One-time migration: if nothing is assigned yet, the active profile owns
+    // everything that already exists (mirrors Settings' first-run backfill).
+    if (!Object.keys(memberships).length && all.length) {
+      memberships[id] = all.map((s) => s.id);
+      try { localStorage.setItem("cortex-account-subjects", JSON.stringify(memberships)); } catch {}
+    }
+    const known = new Set(Object.values(memberships).flat());
+    const mine = new Set(memberships[id] ?? []);
+    // Claim any subject no profile owns yet for the active profile.
+    let claimed = false;
+    for (const s of all) {
+      if (!known.has(s.id)) { mine.add(s.id); claimed = true; }
+    }
+    if (claimed) {
+      memberships[id] = [...mine];
+      try { localStorage.setItem("cortex-account-subjects", JSON.stringify(memberships)); } catch {}
+    }
+    return all.filter((s) => mine.has(s.id));
+  }
+  // Fetch the full subject list and scope it to the active local profile.
+  async #loadSubjects(): Promise<Subject[]> {
+    return this.#scopeToAccount(await api.listSubjects());
+  }
+
   async refresh() {
-    this.subjects = await api.listSubjects();
+    this.subjects = await this.#loadSubjects();
+    // The active subject may have been scoped out (belongs to another profile).
+    if (this.activeSubjectId && !this.subjects.some((s) => s.id === this.activeSubjectId)) {
+      this.activeSubjectId = this.subjects[0]?.id ?? null;
+    }
     if (this.activeSource) {
       this.activeSource =
         (await api.getSource(this.activeSource.id).catch(() => null)) ?? this.activeSource;
@@ -1272,7 +1318,7 @@ class AppStore {
     try {
       await api.deleteSubject(id);
       const wasActive = this.activeSubjectId === id;
-      this.subjects = await api.listSubjects();
+      this.subjects = await this.#loadSubjects();
       if (wasActive) {
         this.activeSubjectId = this.subjects[0]?.id ?? null;
         this.activeSource = null;
@@ -1290,7 +1336,7 @@ class AppStore {
     try {
       await api.archiveSubject(id, archived);
       const wasActive = this.activeSubjectId === id;
-      this.subjects = await api.listSubjects();
+      this.subjects = await this.#loadSubjects();
       if (archived && wasActive) {
         this.activeSubjectId = this.subjects[0]?.id ?? null;
         this.activeSource = null;
@@ -1321,7 +1367,7 @@ class AppStore {
   async updateSubject(id: string, name: string, code?: string, glyph?: string, color?: string) {
     try {
       await api.updateSubject(id, name, code, glyph, color);
-      this.subjects = await api.listSubjects();
+      this.subjects = await this.#loadSubjects();
       this.pushToast({ kind: "success", title: "Subject updated" });
     } catch (e) {
       this.pushToast({ kind: "error", title: "Update failed", body: String(e) });

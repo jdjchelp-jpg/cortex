@@ -175,14 +175,14 @@
   const accountSubjectsKey = "cortex-account-subjects";
   function subjectMemberships(): Record<string, string[]> { try { return JSON.parse(localStorage.getItem(accountSubjectsKey) ?? "{}"); } catch { return {}; } }
   async function applyAccountSubjects(id: string) {
-    const all = await api.listSubjects().catch(() => [] as api.Subject[]);
-    const memberships = subjectMemberships();
-    if (!Object.keys(memberships).length && accounts[0]) memberships[accounts[0].id] = all.map((s) => s.id);
-    const known = new Set(Object.values(memberships).flat());
-    if (accounts[0]) memberships[accounts[0].id] = [...new Set([...(memberships[accounts[0].id] ?? []), ...all.filter((s) => !known.has(s.id)).map((s) => s.id)])];
-    localStorage.setItem(accountSubjectsKey, JSON.stringify(memberships));
-    app.subjects = all.filter((s) => (memberships[id] ?? []).includes(s.id));
-    app.activeSubjectId = app.subjects[0]?.id ?? null;
+    // Subject<->profile isolation now lives in the store: it reads
+    // cortex-active-account + cortex-account-subjects, claims any not-yet-owned
+    // subject for the ACTIVE profile, and filters the list. Pin the active
+    // profile here, then let the store scope + reload. (This replaces the old
+    // logic that force-added every unclaimed subject to accounts[0] - which is
+    // what leaked a subject created in a new account into the main account.)
+    try { localStorage.setItem("cortex-active-account", id); } catch { /* ignore */ }
+    await app.refresh();
   }
   function newAccountId(): string {
     const uuid = globalThis.crypto?.randomUUID;
@@ -1518,10 +1518,10 @@
             {/if}
             <div class="set-row">
               <div class="set-row-l"><div class="set-row-t">Accessibility</div><div class="set-row-d">Improve contrast, reading comfort, and motion sensitivity.</div></div>
-              <div class="set-row-r" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-                <button type="button" class="st-toggle{highContrast ? ' on' : ''}" role="switch" aria-checked={highContrast} onclick={() => (highContrast = !highContrast)}><span class="st-knob"></span><span class="mono">High contrast</span></button>
-                <button type="button" class="st-toggle{dyslexiaFont ? ' on' : ''}" role="switch" aria-checked={dyslexiaFont} onclick={() => (dyslexiaFont = !dyslexiaFont)}><span class="st-knob"></span><span class="mono">Dyslexia-friendly</span></button>
-                <button type="button" class="st-toggle{reducedMotion ? ' on' : ''}" role="switch" aria-checked={reducedMotion} onclick={() => (reducedMotion = !reducedMotion)}><span class="st-knob"></span><span class="mono">Reduce motion</span></button>
+              <div class="set-row-r" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:flex-end">
+                <button type="button" class="a11y-opt" role="switch" aria-checked={highContrast} onclick={() => (highContrast = !highContrast)}><span class="st-toggle{highContrast ? ' on' : ''}"><span class="st-knob"></span></span><span class="mono">High contrast</span></button>
+                <button type="button" class="a11y-opt" role="switch" aria-checked={dyslexiaFont} onclick={() => (dyslexiaFont = !dyslexiaFont)}><span class="st-toggle{dyslexiaFont ? ' on' : ''}"><span class="st-knob"></span></span><span class="mono">Dyslexia-friendly</span></button>
+                <button type="button" class="a11y-opt" role="switch" aria-checked={reducedMotion} onclick={() => (reducedMotion = !reducedMotion)}><span class="st-toggle{reducedMotion ? ' on' : ''}"><span class="st-knob"></span></span><span class="mono">Reduce motion</span></button>
               </div>
             </div>
           </div>
