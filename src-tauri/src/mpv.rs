@@ -225,16 +225,36 @@ fn ipc(socket: &str, cmd: &Value) -> Result<()> {
 #[cfg(windows)]
 fn ipc(socket: &str, cmd: &Value) -> Result<()> {
     use std::io::Write;
-    let mut stream = std::fs::OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open(socket)
-        .map_err(|e| Error::Other(format!("mpv not reachable on {socket}: {e}")))?;
-    let mut line = serde_json::to_vec(cmd)?;
-    line.push(b'\n');
-    stream.write_all(&line)?;
-    Ok(())
+    // A single open()/write() can hit "all pipe instances are busy"
+    // (ERROR_PIPE_BUSY) while a previously crashed mpv is still being torn
+    // down or a fresh mpv is warming up. Retry a few times before surfacing
+    // the error, then carry on the (already-spawned) playback.
+    let line = serde_json::to_vec(cmd)
+        .map_err(|e| Error::Other(format!("mpv IPC encode failed: {e}")))?;
+    let mut attempts = 0u32;
+    loop {
+        match std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(socket)
+        {
+            Ok(mut stream) => {
+                stream.write_all(&line)?;
+                return Ok(());
+            }
+            Err(e) => {
+                attempts += 1;
+                if attempts >= 3 {
+                    return Err(Error::Other(format!(
+                        "mpv not reachable on {socket}: {e}"
+                    )));
+                }
+                std::thread::sleep(Duration::from_millis(100));
+            }
+        }
+    }
 }
+
 
 /// Best-effort IPC (used for pause/stop/volume): if mpv isn't running, there's
 /// nothing to control, so a connect failure is silently ignored.

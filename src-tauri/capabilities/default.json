@@ -20,6 +20,8 @@
     "dialog:allow-open",
     "dialog:allow-save",
     "notification:default",
-    "process:default"
+    "process:default",
+    "opener:allow-open-url",
+    "opener:allow-open-path"
   ]
 }
