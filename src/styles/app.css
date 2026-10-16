@@ -897,6 +897,9 @@ html[data-hints="off"] .compose-hint, html[data-hints="off"] .diff-keys, html[da
 
 /* ============ AUDIO OVERVIEW (podcast) ============ */
 .ao { flex: 1; display: grid; grid-template-columns: 1fr 380px; min-height: 0; overflow: hidden; }
+
+/* Audio overview transcript clips overflow so the spoken-script text can never run
+   below the box (the same text can be long for audiobooks / hour-long podcasts). */
 .ao-main { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-5); padding: var(--sp-8) var(--sp-7); min-height: 0; overflow-y: auto; }
 .ao-back { position: absolute; top: 16px; left: 16px; }
 .ao-cover { width: 220px; height: 220px; flex: none; }
@@ -923,7 +926,7 @@ html[data-hints="off"] .compose-hint, html[data-hints="off"] .diff-keys, html[da
 .ao-play:hover { transform: scale(1.05); }
 .ao-speed { min-width: 42px; height: 30px; padding: 0 10px; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: var(--rad-pill); color: var(--fg-muted); font-size: var(--t-xs); cursor: pointer; }
 .ao-speed:hover { color: var(--fg-bright); border-color: var(--fg-faint); }
-.ao-transcript { border-left: 1px solid var(--border); background: var(--bg-sunken); display: flex; flex-direction: column; min-height: 0; }
+.ao-transcript { border-left: 1px solid var(--border); background: var(--bg-sunken); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .ao-tr-head { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 16px; border-bottom: 1px solid var(--border); flex: none; }
 .ao-tr-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
 .ao-line { padding: 10px 12px; border-radius: var(--rad-3); cursor: pointer; border: 1px solid transparent; transition: background var(--dur-fast), opacity var(--dur-fast); }

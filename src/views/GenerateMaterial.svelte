@@ -3,6 +3,7 @@
   import * as api from "../lib/api";
   import Icon from "../components/Icon.svelte";
   import { jobs, type JobKind } from "../lib/jobs.svelte";
+  import { LOCALES, activeLocale } from "../lib/i18n";
 
   // ── Material type definitions ──────────────────────────────
   const GEN_TYPES = [
@@ -134,8 +135,9 @@
     const matTitle = finalTitle || undefined;
     const sourceIds = [...sel];
     const count = countValue ?? undefined;
+    const langLabel = LOCALES.find((l) => l.id === activeLocale)?.label ?? "English";
     const generationPrompt = type === "audio"
-      ? `${customPrompt.trim()}\nAudio format: ${audioMode === "dramatic" ? "dramatic audiobook storytelling with scenes, characters, and narrative pacing" : audioMode === "audiobook" ? "novel-like educational audiobook narrated by one voice" : "two-host study podcast"}. Target length: ${audioLength} minutes.`.trim()
+      ? `${customPrompt.trim()}\nAudio format: ${audioMode === "dramatic" ? "dramatic audiobook storytelling with scenes, characters, and narrative pacing" : audioMode === "audiobook" ? "novel-like educational audiobook narrated by one voice" : "two-host study podcast"}. Target length: ${audioLength} minutes. Write the entire script — all words, dialogue, and narration — in ${langLabel}.`.trim()
       : customPrompt.trim();
 
     jobs.start({
